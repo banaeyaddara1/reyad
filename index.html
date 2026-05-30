@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صيدلية فراس - نظام إدارة العيادة</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jQuery UI للـ Autocomplete -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/smoothness/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- Animate.css للحركات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        * { font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* الوضع الفاتح (النهاري) */
+        :root {
+            --bg-gradient-start: #1a5f7a;
+            --bg-gradient-end: #0d3b3b;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-color: #333;
+            --header-bg: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%);
+            --header-text-color: #ffffff;
+            --nav-active: #1a5f7a;
+            --btn-bg: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%);
+            --table-header: #1a5f7a;
+            --footer-text: rgba(255,255,255,0.7);
+            --border-color: #ddd;
+            --shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        
+        /* الوضع الليلي (الافتراضي) */
+        body.dark-mode {
+            --bg-gradient-start: #0a1a1a;
+            --bg-gradient-end: #061212;
+            --card-bg: rgba(30, 42, 42, 0.95);
+            --text-color: #e0e0e0;
+            --header-bg: linear-gradient(135deg, #0d3b3b 0%, #061212 100%);
+            --header-text-color: #e0e0e0;
+            --nav-active: #2a7f6e;
+            --btn-bg: linear-gradient(135deg, #2a7f6e 0%, #1a5f5a 100%);
+            --table-header: #2a7f6e;
+            --footer-text: rgba(255,255,255,0.5);
+            --border-color: #3a4a4a;
+            --shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+        
+        /* تطبيق الوضع الليلي افتراضياً */
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0a1a1a 0%, #061212 100%);
+        }
+        
+        /* تأثير الخلفية المتحركة */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.05"><path fill="white" d="M20,20 L80,20 L80,80 L20,80 Z"/><circle cx="50" cy="50" r="10"/></svg>');
+            background-repeat: repeat;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .main-card { 
+            background: var(--card-bg); 
+            border-radius: 30px; 
+            box-shadow: var(--shadow); 
+            overflow: hidden; 
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* ترويسة مميزة */
+        .custom-header {
+            background: var(--header-bg);
+            padding: 25px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .custom-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .logo-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            background: white;
+            border-radius: 25px;
+            padding: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .logo-img:hover {
+            transform: scale(1.05) rotate(3deg);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+        
+        .header-text h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            color: var(--header-text-color);
+        }
+        
+        .header-text p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            color: var(--header-text-color);
+        }
+        
+        .since-text {
+            font-size: 1rem;
+            opacity: 0.85;
+            color: var(--header-text-color);
+            background: rgba(0,0,0,0.2);
+            padding: 8px 15px;
+            border-radius: 50px;
+            display: inline-block;
+        }
+        
+        .nav-tabs { 
+            border-bottom: 2px solid var(--border-color); 
+            padding: 0 20px; 
+            background: var(--card-bg); 
+        }
+        
+        .nav-tabs .nav-link { 
+            border: none; 
+            color: var(--text-color); 
+            font-weight: 500; 
+            padding: 15px 25px; 
+            margin-right: 5px; 
+            transition: all 0.3s; 
+            opacity: 0.7;
+            position: relative;
+        }
+        
+        .nav-tabs .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--nav-active);
+            transition: all 0.3s;
+            transform: translateX(50%);
+        }
+        
+        .nav-tabs .nav-link:hover::after,
+        .nav-tabs .nav-link.active::after {
+            width: 80%;
+        }
+        
+        .nav-tabs .nav-link:hover { 
+            opacity: 1;
+        }
+        
+        .nav-tabs .nav-link.active { 
+            opacity: 1;
+        }
+        
+        .tab-content { padding: 25px; }
+        
+        .dashboard-card { 
+            border: none; 
+            border-radius: 20px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08); 
+            margin-bottom: 25px; 
+            background: var(--card-bg);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .card-header { 
+            background: var(--header-bg); 
+            color: white; 
+            border-radius: 20px 20px 0 0 !important; 
+            padding: 15px 25px; 
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .card-header i {
+            margin-left: 10px;
+        }
+        
+        .btn-primary { 
+            background: var(--btn-bg); 
+            border: none; 
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 25px rgba(26,95,122,0.4); 
+        }
+        
+        .btn-danger {
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn-danger:hover {
+            transform: scale(1.05);
+        }
+        
+        .table-responsive { 
+            max-height: 500px; 
+            overflow-y: auto; 
+            border-radius: 15px; 
+        }
+        
+        .table {
+            color: var(--text-color);
+        }
+        
+        .table thead th {
+            background: var(--table-header);
+            color: white;
+            padding: 12px;
+            font-weight: bold;
+        }
+        
+        .table tbody tr {
+            transition: background 0.2s;
+        }
+        
+        .table tbody tr:hover {
+            background: var(--border-color);
+        }
+        
+        .search-box { 
+            background: var(--border-color); 
+            border-radius: 50px; 
+            padding: 5px 20px; 
+        }
+        
+        .search-box input {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            padding: 8px 15px;
+        }
+        
+        .total-box { 
+            background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%); 
+            color: white; 
+            border-radius: 25px; 
+            padding: 30px; 
+            text-align: center;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .total-box:hover {
+            transform: scale(1.02);
+        }
+        
+        footer { 
+            text-align: center; 
+            padding: 20px; 
+            color: var(--footer-text); 
+            font-size: 14px; 
+        }
+        
+        .mode-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            font-size: 1.3rem;
+            color: var(--text-color);
+        }
+        
+        .mode-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+        }
+        
+        @media (max-width: 768px) {
+            .nav-tabs .nav-link { padding: 10px 12px; font-size: 12px; }
+            .tab-content { padding: 15px; }
+            .header-text h1 { font-size: 1.3rem; }
+            .logo-img { width: 70px; height: 70px; }
+            .since-text { font-size: 0.8rem; }
+        }
+        
+        @media (max-width: 480px) {
+            .logo-img { width: 55px; height: 55px; }
+            .header-text h1 { font-size: 1rem; }
+            .header-text p { font-size: 0.8rem; }
+        }
+        
+        .payment-details {
+            background: var(--border-color);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .filter-card {
+            background: var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* تنسيق الـ Autocomplete الجذاب */
+        .ui-autocomplete {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--nav-active);
+            border-radius: 15px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .ui-autocomplete li {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .ui-autocomplete li:last-child {
+            border-bottom: none;
+        }
+        
+        .ui-autocomplete li:hover {
+            background: var(--nav-active);
+            color: white;
+        }
+        
+        .patient-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .patient-name {
+            font-weight: bold;
+            font-size: 1rem;
+        }
+        
+        .patient-phone {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        
+        /* بطاقات إحصائية */
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            color: white;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card h2 {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        /* شريط التقدم المخصص */
+        .custom-progress {
+            background: rgba(255,255,255,0.2);
+            border-radius: 50px;
+            overflow: hidden;
+            height: 30px;
+        }
+        
+        .custom-progress-bar {
+            background: #38ef7d;
+            height: 100%;
+            border-radius: 50px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--nav-active);
+            box-shadow: 0 0 0 0.2rem rgba(26,95,122,0.25);
+        }
+        
+        /* تحسين لون النص في المود النهاري في الترويسة */
+        body:not(.dark-mode) .custom-header {
+            background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%);
+        }
+        
+        body:not(.dark-mode) .custom-header h1,
+        body:not(.dark-mode) .custom-header p,
+        body:not(.dark-mode) .custom-header .since-text {
+            color: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        body:not(.dark-mode) .custom-header .since-text {
+            background: rgba(0,0,0,0.25);
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <button class="mode-toggle" onclick="toggleMode()" id="modeToggle">
+        <i class="fas fa-sun"></i>
+    </button>
+
+    <div class="container">
+        <div class="main-card animate__animated animate__fadeInUp">
+            <!-- Header مميز مع لوجو -->
+            <div class="custom-header">
+                <div class="logo-container">
+                    <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
+                    <div class="header-text">
+                        <h1><i class="fas fa-hospital"></i> صيدلية فراس</h1>
+                        <p><i class="fas fa-user-md"></i> دكتور: رياض قواريق | نظام إدارة العيادة المتكامل</p>
+                        <div class="since-text"><i class="fas fa-calendar-alt"></i> SINCE 1969</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs" id="mainTab" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- ===================== تبويب المرضى ===================== -->
+                <div class="tab-pane fade show active" id="patients">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fas fa-user-plus"></i> إضافة مريض جديد</div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4"><input type="text" id="patientName" class="form-control" placeholder="الاسم الكامل *"></div>
+                                <div class="col-md-3"><input type="tel" id="patientPhone" class="form-control" placeholder="رقم الجوال"></div>
+                                <div class="col-md-3"><input type="text" id="patientAddress" class="form-control" placeholder="العنوان"></div>
+                                <div class="col-md-2"><button class="btn btn-primary w-100" onclick="addPatient()"><i class="fas fa-save"></i> حفظ</button></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fas fa-list"></i> قائمة المرضى</div>
+                        <div class="card-body">
+                            <div class="search-box mb-3 d-flex align-items-center gap-2"><i class="fas fa-search"></i> <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()"></div>
+                            <div id="patientsList" class="table-responsive"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===================== تبويب إدخال زيارة ===================== -->
+                <div class="tab-pane fade" id="visits">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
+                                <input type="text" id="patientSearchInput" class="form-control" placeholder="اكتب اسم المريض (سيظهر اقتراحات)">
+                                <input type="hidden" id="selectedPatientId" value="">
+                            </div>
+                            <div class="mb-3"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
+                            <div class="mb-3"><label class="form-label"><i class="fas fa-pills"></i> العلاج / الإجراء</label><textarea id="treatment" class="form-control" rows="2" placeholder="العلاج الموصوف..."></textarea></div>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
+                                <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
+                                <div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background-color:#f0f0f0"></div>
+                            </div>
+                            <button class="btn btn-primary btn-lg w-100" onclick="addVisitWithAutocomplete()"><i class="fas fa-save"></i> تسجيل الزيارة</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===================== تبويب التاريخ الطبي ===================== -->
+                <div class="tab-pane fade" id="history">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fas fa-search"></i> البحث في التاريخ الطبي</div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
+                                <input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث">
+                                <input type="hidden" id="historySelectedPatientId" value="">
+                            </div>
+                            <button class="btn btn-primary w-100" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
+                            <div id="historyResult" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===================== تبويب التقارير المالية ===================== -->
+                <div class="tab-pane fade" id="finance">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
+                        <div class="card-body">
+                            <div class="filter-card">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label><i class="fas fa-calendar-alt"></i> من تاريخ</label>
+                                        <input type="date" id="startDate" class="form-control">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label><i class="fas fa-calendar-alt"></i> إلى تاريخ</label>
+                                        <input type="date" id="endDate" class="form-control">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label><i class="fas fa-user"></i> اختر مريض (اختياري)</label>
+                                        <input type="text" id="financePatientSearch" class="form-control" placeholder="اكتب اسم المريض للبحث عنه">
+                                        <input type="hidden" id="financeSelectedPatientId" value="">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label>&nbsp;</label>
+                                        <button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="financeResult"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            <i class="fas fa-code"></i> Powered By Eyad Sulayman | جميع الخدمات محفوظة © 2026
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="app.js"></script>
+    
+    <script>
+        function toggleMode() {
+            document.body.classList.toggle('dark-mode');
+            const btn = document.getElementById('modeToggle');
+            if (document.body.classList.contains('dark-mode')) {
+                btn.innerHTML = '<i class="fas fa-sun"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-moon"></i>';
+            }
+        }
+        
+        function calculateRemaining() {
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
+            const remaining = total - paid;
+            document.getElementById('remainingAmount').value = remaining >= 0 ? remaining : 0;
+        }
+        
+        // مراقبة تغيير حقل البحث المالي لإعادة تعيين التقرير عند مسحه
+        document.addEventListener('DOMContentLoaded', function() {
+            const financeSearch = document.getElementById('financePatientSearch');
+            if (financeSearch) {
+                financeSearch.addEventListener('input', function() {
+                    if (this.value === '') {
+                        document.getElementById('financeSelectedPatientId').value = '';
+                        getFinancialReportAutocomplete();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
