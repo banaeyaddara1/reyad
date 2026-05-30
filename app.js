@@ -15,36 +15,41 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-console.log("✅ Firebase متصل بنجاح غياثياً عبر الويب");
+console.log("✅ Firebase متصل بنجاح");
 
 // ===================== المتغيرات العامة =====================
 let allPatients = [];
 let patientNamesList = [];
 
-// ===================== دالة مساعدة لتحويل تاريخ إكسل العشوائي العشري =====================
+// ===================== دالة التحويل الذكية والمطورة للتواريخ =====================
 function parseExcelDate(excelDateValue) {
     if (!excelDateValue) return new Date().toLocaleDateString('ar-EG');
     
-    // إذا كان التنسيق مدخلاً كنص مسبقاً (مثل 30/05/2026) قم بإرجاعه كما هو
-    if (typeof excelDateValue === 'string' && excelDateValue.includes('/')) {
-        return excelDateValue;
+    let dateStr = String(excelDateValue).trim();
+    
+    // 1. إذا كان التاريخ يحتوي على شرطات (مثل 25-04-2026)، يتم تحويلها فوراً إلى مائل ليتوافق مع البرنامج
+    if (dateStr.includes('-')) {
+        // إزالة أي أصفار زائدة في البداية إن وجدت وتوحيد الفاصلة
+        return dateStr.replace(/-/g, '/');
     }
     
-    // إذا كان رقماً تسلسلياً خاصاً بإكسل (مثل 46143)
+    // 2. إذا كان التاريخ يحتوي على مائل أصلاً (مثل 25/04/2026)
+    if (dateStr.includes('/')) {
+        return dateStr;
+    }
+    
+    // 3. إذا كان رقماً تسلسلياً خاماً من إكسل (مثل 46143)
     const num = parseFloat(excelDateValue);
     if (!isNaN(num)) {
-        // حساب التاريخ بناءً على توقيت نظام الملفات (الأيام منذ 30 ديسمبر 1899 لتعويض خطأ قفزة 1900 في إكسل)
         const dateObj = new Date(Math.round((num - 25569) * 86400 * 1000));
-        
-        const day = String(dateObj.getDate());
-        const month = String(dateObj.getMonth() + 1);
+        const day = dateObj.getDate();
+        const month = dateObj.getMonth() + 1;
         const year = dateObj.getFullYear();
         
-        // إرجاع التنسيق الموحد للبرنامج لتشغيل التقارير المالية والبحث بسلاسة
         return `${day}/${month}/${year}`;
     }
     
-    return String(excelDateValue);
+    return dateStr;
 }
 
 // ===================== تحديث قائمة المرضى من Firebase =====================
@@ -171,7 +176,7 @@ window.addPatient = async function() {
     }
 };
 
-// ===================== حذف مريض =====================
+// ===================== حذف مريض مفرد =====================
 window.deletePatient = async (id) => {
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المريض؟ سيتم حذف جميع زياراته أيضاً!')) {
         try {
@@ -217,7 +222,7 @@ window.addVisitWithAutocomplete = async function() {
         totalAmount: totalAmount,
         paidAmount: paidAmount,
         remainingAmount: remainingAmount >= 0 ? remainingAmount : 0,
-        date: now.toLocaleDateString('ar-EG'),
+        date: now.toLocaleDateString('ar-EG'), // ستنتج بالتنسيق المائل الافتراضي للبرنامج
         time: now.toLocaleTimeString('ar-EG'),
         timestamp: now.getTime()
     };
@@ -300,7 +305,7 @@ window.deleteVisit = async (id) => {
     }
 };
 
-// ===================== التقارير المالية والتحليلات البنائية =====================
+// ===================== التقارير المالية =====================
 window.getFinancialReportAutocomplete = async () => {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -324,7 +329,6 @@ window.getFinancialReportAutocomplete = async () => {
             if (v.date) {
                 const parts = v.date.split('/');
                 if (parts.length === 3) {
-                    // تحويل التنسيق D/M/YYYY لكائن تاريخ للمقارنة النطاقية
                     visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
                 }
             }
@@ -429,10 +433,10 @@ window.getFinancialReportAutocomplete = async () => {
     document.getElementById('financeResult').innerHTML = html;
 };
 
-// ===================== بوابات حماية الحذف الشامل بالباسوورد المخصصة =====================
+// ===================== بوابات حماية الحذف الشامل بالباسوورد =====================
 window.clearAllPatientsData = async () => {
     const password = prompt('🚨 إجراء خطر للغاية! يرجى إدخال كلمة مرور المسؤول للمسح الشامل للمرضى:');
-    if (password === null) return; // تم إلغاء العملية
+    if (password === null) return;
     
     if (password === "Admin123456") {
         if (confirm('هل أنت متأكد تماماً من تصفير جدول كافة المرضى نهائياً؟')) {
@@ -467,7 +471,7 @@ window.clearAllVisitsData = async () => {
     }
 };
 
-// ===================== محرك إدارة مستندات وقوالب Excel المحدث =====================
+// ===================== محرك تحميل وتصدير ملفات Excel =====================
 window.downloadTemplate = function(type) {
     let headers = [];
     let filename = "";
@@ -522,7 +526,6 @@ window.importPatientsExcel = function() {
     reader.readAsArrayBuffer(file);
 };
 
-// الاستيراد المحدث للتاريخ الطبي لحل مشكلة السيريال للملفات المرفوعة
 window.importVisitsExcel = async function() {
     const fileInput = document.getElementById('excelVisitsFile');
     if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف التاريخ الطبي Excel أولاً"); }
@@ -541,7 +544,6 @@ window.importVisitsExcel = async function() {
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             
-            // قراءة البيانات الخام وإجبار إكسل على عدم تخريب خلايا التواريخ وتحويلها لسيريال عشوائي
             const json = XLSX.utils.sheet_to_json(worksheet, { raw: true });
             
             let count = 0;
@@ -567,7 +569,7 @@ window.importVisitsExcel = async function() {
                 const paid = parseFloat(row["المبلغ المدفوع"]) || 0;
                 const remaining = total - paid;
                 
-                // هنا نقوم بفك تشفير التاريخ المجلوب أوتوماتيكياً وترجمته لصيغة البرنامج الموحدة
+                // فك التشفير والتحويل المزدوج للشرطات (-) والمائل (/) والسيريال
                 const structuredDate = parseExcelDate(row["التاريخ"]);
                 
                 const newVisitRef = push(ref(db, 'visits'));
