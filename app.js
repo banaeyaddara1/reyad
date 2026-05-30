@@ -85,7 +85,6 @@ window.filterPatients = function() {
 
 // ===================== تحديث الـ Autocomplete =====================
 function updateAutocomplete() {
-    // حقل إدخال الزيارة
     if (document.getElementById('patientSearchInput')) {
         $("#patientSearchInput").autocomplete({
             source: patientNamesList,
@@ -94,14 +93,9 @@ function updateAutocomplete() {
                 document.getElementById('selectedPatientId').value = ui.item.id;
                 return false;
             }
-        }).data("ui-autocomplete")._renderItem = function(ul, item) {
-            return $("<li>")
-                .append(`<div class="patient-result"><span class="patient-name">${item.value}</span><span class="patient-phone">${item.phone ? item.phone : ''}</span></div>`)
-                .appendTo(ul);
-        };
+        });
     }
     
-    // حقل التاريخ الطبي
     if (document.getElementById('historySearchInput')) {
         $("#historySearchInput").autocomplete({
             source: patientNamesList,
@@ -110,14 +104,9 @@ function updateAutocomplete() {
                 document.getElementById('historySelectedPatientId').value = ui.item.id;
                 return false;
             }
-        }).data("ui-autocomplete")._renderItem = function(ul, item) {
-            return $("<li>")
-                .append(`<div class="patient-result"><span class="patient-name">${item.value}</span><span class="patient-phone">${item.phone ? item.phone : ''}</span></div>`)
-                .appendTo(ul);
-        };
+        });
     }
     
-    // حقل التقارير المالية
     if (document.getElementById('financePatientSearch')) {
         $("#financePatientSearch").autocomplete({
             source: patientNamesList,
@@ -127,11 +116,7 @@ function updateAutocomplete() {
                 getFinancialReportAutocomplete();
                 return false;
             }
-        }).data("ui-autocomplete")._renderItem = function(ul, item) {
-            return $("<li>")
-                .append(`<div class="patient-result"><span class="patient-name">${item.value}</span><span class="patient-phone">${item.phone ? item.phone : ''}</span></div>`)
-                .appendTo(ul);
-        };
+        });
     }
 }
 
@@ -156,14 +141,13 @@ window.addPatient = async function() {
         document.getElementById('patientName').value = '';
         document.getElementById('patientPhone').value = '';
         document.getElementById('patientAddress').value = '';
-        alert('✅ تم إضافة المريض بنجاح!');
     } catch (error) {
         console.error("خطأ:", error);
         alert('❌ فشل في إضافة المريض: ' + error.message);
     }
 };
 
-// ===================== حذف مريض =====================
+// ===================== حذف مريض مفرد =====================
 window.deletePatient = async (id) => {
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المريض؟ سيتم حذف جميع زياراته أيضاً!')) {
         try {
@@ -181,12 +165,35 @@ window.deletePatient = async (id) => {
             alert('🗑️ تم حذف المريض وجميع زياراته');
         } catch (error) {
             console.error("خطأ:", error);
-            alert('❌ فشل في الحذف');
         }
     }
 };
 
-// ===================== إضافة زيارة جديدة =====================
+// ===================== مسح كافة بيانات الجداول لتنظيف اللخبطة =====================
+window.clearAllPatientsData = async () => {
+    if (confirm('🚨 تحذير صارم: هل تريد حقاً مسح قاعدة بيانات المرضى بالكامل من السيرفر؟ هذا الإجراء لا يمكن التراجع عنه ويحذف كل شيء!')) {
+        try {
+            await remove(ref(db, 'patients'));
+            alert('✅ تم تصفير جدول المرضى بنجاح من السحابة.');
+        } catch (error) {
+            alert('حدث خطأ أثناء المسح: ' + error.message);
+        }
+    }
+};
+
+window.clearAllVisitsData = async () => {
+    if (confirm('🚨 تحذير صارم: هل تريد مسح التاريخ الطبي وجدول الزيارات بالكامل؟ سيتم تصفير التقارير المالية والزيارات.')) {
+        try {
+            await remove(ref(db, 'visits'));
+            alert('✅ تم تصفير التاريخ الطبي بالكامل.');
+            if(document.getElementById('historyResult')) document.getElementById('historyResult').innerHTML = '';
+        } catch (error) {
+            alert('حدث خطأ أثناء المسح: ' + error.message);
+        }
+    }
+};
+
+// ===================== إضافة زيارة جديدة يدويًا =====================
 window.addVisitWithAutocomplete = async function() {
     const patientId = document.getElementById('selectedPatientId').value;
     if (!patientId) {
@@ -227,7 +234,6 @@ window.addVisitWithAutocomplete = async function() {
         alert('✅ تم تسجيل الزيارة بنجاح!');
     } catch (error) {
         console.error("خطأ:", error);
-        alert('❌ فشل في تسجيل الزيارة');
     }
 };
 
@@ -281,7 +287,7 @@ window.searchMedicalHistoryAutocomplete = async () => {
     document.getElementById('historyResult').innerHTML = html;
 };
 
-// ===================== حذف زيارة =====================
+// ===================== حذف زيارة مفرده =====================
 window.deleteVisit = async (id) => {
     if (confirm('⚠️ هل أنت متأكد من حذف هذه الزيارة؟')) {
         try {
@@ -291,12 +297,11 @@ window.deleteVisit = async (id) => {
             getFinancialReportAutocomplete();
         } catch (error) {
             console.error("خطأ:", error);
-            alert('❌ فشل في الحذف');
         }
     }
 };
 
-// ===================== التقرير المالي (المحدث) =====================
+// ===================== التقرير المالي =====================
 window.getFinancialReportAutocomplete = async () => {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -315,7 +320,6 @@ window.getFinancialReportAutocomplete = async () => {
     if (visits) {
         for (const key of Object.keys(visits)) {
             const v = visits[key];
-            
             let visitDate = null;
             if (v.date) {
                 const parts = v.date.split('/');
@@ -395,15 +399,9 @@ window.getFinancialReportAutocomplete = async () => {
                         </tr>
                     </tfoot>
                 </table>
-                <div class="total-box">
-                    <div class="row">
-                        <div class="col-md-4"><h4><i class="fas fa-percent"></i> نسبة التحصيل: ${collectionRate}%</h4></div>
-                        <div class="col-md-8"><div class="custom-progress"><div class="custom-progress-bar" style="width: ${collectionRate}%;">${collectionRate}%</div></div></div>
-                    </div>
-                </div>
             </div>`;
         } else {
-            html = '<div class="alert alert-warning animate__animated animate__shakeX">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
+            html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
         }
     } else {
         html = `
@@ -421,15 +419,179 @@ window.getFinancialReportAutocomplete = async () => {
                         <div class="col-md-6"><p><i class="fas fa-chart-line"></i> نسبة التحصيل: ${collectionRate}%</p></div>
                     </div>
                     <div class="custom-progress mt-2"><div class="custom-progress-bar" style="width: ${collectionRate}%;">${collectionRate}%</div></div>
-                    <p class="mt-3"><i class="fas fa-info-circle"></i> هذه المجاميع تشمل جميع المرضى في الفترة المحددة</p>
                 </div>
             </div>`;
     }
-    
     document.getElementById('financeResult').innerHTML = html;
 };
 
-// ===================== تحميل البيانات عند بدء التشغيل =====================
+// ===================== محرك إدارة واستيراد ملفات Excel =====================
+
+// دالة تحميل القوالب بالهيدرز المعتمدة
+window.downloadTemplate = function(type) {
+    let headers = [];
+    let filename = "";
+    if (type === "patients") {
+        headers = [["الاسم", "الجوال", "العنوان"]];
+        filename = "قالب_استيراد_المرضى.xlsx";
+    } else if (type === "visits") {
+        headers = [["اسم المريض", "التشخيص", "العلاج", "المبلغ الكامل", "المبلغ المدفوع", "التاريخ"]];
+        filename = "قالب_استيراد_الزيارات.xlsx";
+    }
+    const ws = XLSX.utils.aoa_to_sheet(headers);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, filename);
+};
+
+// استيراد المرضى من Excel
+window.importPatientsExcel = function() {
+    const fileInput = document.getElementById('excelPatientsFile');
+    if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف Excel أولاً"); }
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        
+        let count = 0;
+        for (const row of json) {
+            const name = row["الاسم"]?.toString().trim();
+            if (!name) continue;
+            
+            const newPatientRef = push(ref(db, 'patients'));
+            await set(newPatientRef, {
+                name: name,
+                phone: row["الجوال"]?.toString().trim() || "",
+                address: row["العنوان"]?.toString().trim() || "",
+                createdAt: new Date().toLocaleDateString('ar-EG')
+            });
+            count++;
+        }
+        alert(`✅ تم استيراد عدد ${count} مريض بنجاح إلى قاعدة البيانات!`);
+        fileInput.value = "";
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+// استيراد الزيارات من Excel وربطها التلقائي بالمرضى
+window.importVisitsExcel = async function() {
+    const fileInput = document.getElementById('excelVisitsFile');
+    if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف التاريخ الطبي Excel أولاً"); }
+    
+    // سحب أحدث لستة مرضى من الداتا للتطابق الجيد
+    const patientsSnapshot = await get(ref(db, 'patients'));
+    const currentPatientsData = patientsSnapshot.val() || {};
+    const currentPatientsList = Object.keys(currentPatientsData).map(k => ({ id: k, name: currentPatientsData[k].name }));
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        
+        let count = 0;
+        let skippedCount = 0;
+        const now = new Date();
+        
+        for (const row of json) {
+            const pName = row["اسم المريض"]?.toString().trim();
+            if (!pName) continue;
+            
+            // مطابقة المريض بالاسم للحصول على الـ ID السليم
+            let matchPatient = currentPatientsList.find(p => p.name.toLowerCase() === pName.toLowerCase());
+            let targetId = "";
+            let targetName = pName;
+            
+            if (matchPatient) {
+                targetId = matchPatient.id;
+            } else {
+                // إذا لم يعثر عليه ينشئ مريض جديد تلقائياً لمنع التخريب
+                const newPRef = push(ref(db, 'patients'));
+                await set(newPRef, { name: pName, phone: "", address: "", createdAt: new Date().toLocaleDateString('ar-EG') });
+                targetId = newPRef.key;
+                currentPatientsList.push({ id: targetId, name: pName });
+            }
+            
+            const total = parseFloat(row["المبلغ الكامل"]) || 0;
+            const paid = parseFloat(row["المبلغ المدفوع"]) || 0;
+            const remaining = total - paid;
+            
+            const newVisitRef = push(ref(db, 'visits'));
+            await set(newVisitRef, {
+                patientId: targetId,
+                patientName: targetName,
+                diagnosis: row["التشخيص"]?.toString().trim() || "-",
+                treatment: row["العلاج"]?.toString().trim() || "-",
+                totalAmount: total,
+                paidAmount: paid,
+                remainingAmount: remaining >= 0 ? remaining : 0,
+                date: row["التاريخ"]?.toString().trim() || now.toLocaleDateString('ar-EG'),
+                time: now.toLocaleTimeString('ar-EG'),
+                timestamp: now.getTime()
+            });
+            count++;
+        }
+        alert(`✅ تم استيراد وتحديث عدد ${count} سجل زيارة طبي بنجاح!`);
+        fileInput.value = "";
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+// ===================== محرك تصدير وتنزيل البيانات الحالية لـ Excel =====================
+window.exportPatientsToExcel = function() {
+    if (!allPatients.length) return alert("❌ لا توجد بيانات مرضى لتصديرها");
+    
+    const dataRows = allPatients.map(p => ({
+        "الاسم": p.name || "",
+        "الجوال": p.phone || "",
+        "العنوان": p.address || "",
+        "تاريخ التسجيل": p.createdAt || ""
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(dataRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "المرضى");
+    XLSX.writeFile(wb, `قائمة_المرضى_الكلية_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
+};
+
+window.exportVisitsToExcel = async function() {
+    const visitsRef = ref(db, 'visits');
+    const snapshot = await get(visitsRef);
+    const visits = snapshot.val();
+    
+    if (!visits) return alert("❌ لا توجد بيانات زيارات وتاريخ طبي لتصديرها حالياً");
+    
+    const dataRows = Object.keys(visits).map(key => {
+        const v = visits[key];
+        return {
+            "اسم المريض": v.patientName || "",
+            "التشخيص": v.diagnosis || "",
+            "العلاج": v.treatment || "",
+            "المبلغ الكامل": v.totalAmount || 0,
+            "المبلغ المدفوع": v.paidAmount || 0,
+            "المبلغ المتبقي": v.remainingAmount || 0,
+            "التاريخ": v.date || "",
+            "الوقت": v.time || ""
+        };
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(dataRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "التاريخ الطبي");
+    XLSX.writeFile(wb, `التاريخ_الطبي_والزيارات_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
+};
+
+// تحميل البيانات البدئي
 loadPatientsList();
 
 // جعل الدوال متاحة عالمياً
