@@ -11,7 +11,7 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/@jspdf/arabic-fonts@1.0.0/dist/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
         * { font-family: 'Segoe UI', 'Cairo', 'Tahoma', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,6 +49,7 @@
             padding: 20px;
             color: var(--text-color);
             transition: all 0.3s ease;
+            position: relative;
         }
         body::before {
             content: '';
@@ -95,14 +96,12 @@
         footer { text-align: center; padding: 15px; color: var(--footer-text); font-size: 12px; }
         .mode-toggle { position: fixed; top: 15px; left: 15px; z-index: 1000; background: var(--card-bg); border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.2); transition: all 0.3s; font-size: 1.2rem; color: var(--text-color); }
         .mode-toggle:hover { transform: scale(1.1) rotate(10deg); }
-        .payment-details { background: var(--border-color); border-radius: 12px; padding: 12px; margin-top: 10px; }
         .filter-card { background: var(--border-color); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .custom-progress { background: rgba(255,255,255,0.2); border-radius: 50px; overflow: hidden; height: 25px; }
         .custom-progress-bar { background: #38ef7d; height: 100%; border-radius: 50px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #000; }
         .ui-autocomplete { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--nav-active); border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 2000; }
         .ui-autocomplete li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .ui-autocomplete li:hover { background: var(--nav-active); color: white; }
-        .patient-result { display: flex; justify-content: space-between; align-items: center; }
         .opening-balance { background: linear-gradient(135deg, #ffd89b, #19547b); color: white; border-radius: 15px; padding: 12px; margin-bottom: 15px; text-align: center; }
         .btn-group-custom { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
         .medicine-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
@@ -113,7 +112,6 @@
             .logo-img { width: 55px; height: 55px; }
             .header-text h1 { font-size: 1.2rem; }
             .tab-content { padding: 12px; }
-            .btn-group-custom button { font-size: 12px; padding: 5px 10px; }
         }
     </style>
 </head>
@@ -139,7 +137,6 @@
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#import"><i class="fas fa-upload"></i> رفع بيانات</button></li>
             </ul>
             <div class="tab-content">
-                <!-- المرضى -->
                 <div class="tab-pane fade show active" id="patients">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-user-plus"></i> إضافة مريض جديد</div>
@@ -160,44 +157,29 @@
                         </div>
                     </div>
                 </div>
-                <!-- إدخال زيارة -->
                 <div class="tab-pane fade" id="visits">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
                         <div class="card-body">
-                            <div class="mb-2">
-                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض (مطلوب)</label>
-                                <input type="text" id="patientSearchInput" class="form-control" placeholder="اكتب اسم المريض (سيظهر اقتراحات)">
-                                <input type="hidden" id="selectedPatientId" value="">
-                            </div>
+                            <div class="mb-2"><label class="form-label"><i class="fas fa-user"></i> اختر المريض (مطلوب)</label><input type="text" id="patientSearchInput" class="form-control" placeholder="اكتب اسم المريض"><input type="hidden" id="selectedPatientId" value=""></div>
                             <div class="mb-2"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
-                            <div class="mb-2">
-                                <label class="form-label"><i class="fas fa-pills"></i> الأدوية الموصوفة</label>
-                                <div id="medicinesList"><div class="medicine-row"><input type="text" class="form-control" placeholder="اسم الدواء" id="medName0"><input type="number" class="form-control" placeholder="العدد" id="medQty0" value="1" min="1"></div></div>
-                                <button type="button" class="btn btn-sm btn-secondary mt-1" onclick="addMedicineRow()"><i class="fas fa-plus"></i> إضافة دواء آخر</button>
-                            </div>
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background:#f0f0f0"></div>
-                            </div>
+                            <div class="mb-2"><label class="form-label"><i class="fas fa-pills"></i> الأدوية الموصوفة</label><div id="medicinesList"><div class="medicine-row"><input type="text" class="form-control" placeholder="اسم الدواء" id="medName0"><input type="number" class="form-control" placeholder="العدد" id="medQty0" value="1" min="1"></div></div><button type="button" class="btn btn-sm btn-secondary mt-1" onclick="addMedicineRow()"><i class="fas fa-plus"></i> إضافة دواء</button></div>
+                            <div class="row g-2 mb-2"><div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div><div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div><div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background:#f0f0f0"></div></div>
                             <button class="btn btn-primary w-100" onclick="addVisitWithAutocomplete()"><i class="fas fa-save"></i> تسجيل الزيارة</button>
                         </div>
                     </div>
                 </div>
-                <!-- التاريخ الطبي -->
                 <div class="tab-pane fade" id="history">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-search"></i> البحث في التاريخ الطبي</div>
                         <div class="card-body">
-                            <div class="mb-2"><label class="form-label"><i class="fas fa-user"></i> اختر المريض (مطلوب)</label><input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث"><input type="hidden" id="historySelectedPatientId" value=""></div>
+                            <div class="mb-2"><label class="form-label"><i class="fas fa-user"></i> اختر المريض (مطلوب)</label><input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض"><input type="hidden" id="historySelectedPatientId" value=""></div>
                             <button class="btn btn-primary" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
-                            <div class="btn-group-custom"><button class="btn btn-success btn-export-excel" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button><button class="btn btn-danger btn-export-pdf" onclick="exportHistoryToPDF()"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button></div>
+                            <div class="btn-group-custom"><button class="btn btn-success btn-export-excel" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel"></i> Excel</button><button class="btn btn-danger btn-export-pdf" onclick="exportHistoryToPDF()"><i class="fas fa-file-pdf"></i> PDF</button></div>
                             <div id="historyResult" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
-                <!-- التقارير المالية -->
                 <div class="tab-pane fade" id="finance">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
@@ -210,28 +192,20 @@
                                     <div class="col-md-2"><label>&nbsp;</label><button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button></div>
                                 </div>
                             </div>
-                            <div class="btn-group-custom"><button class="btn btn-success btn-export-excel" onclick="exportFinanceToExcel()"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button><button class="btn btn-danger btn-export-pdf" onclick="exportFinanceToPDF()"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button></div>
+                            <div class="btn-group-custom"><button class="btn btn-success btn-export-excel" onclick="exportFinanceToExcel()"><i class="fas fa-file-excel"></i> Excel</button><button class="btn btn-danger btn-export-pdf" onclick="exportFinanceToPDF()"><i class="fas fa-file-pdf"></i> PDF</button></div>
                             <div id="financeResult"></div>
                         </div>
                     </div>
                 </div>
-                <!-- رفع البيانات -->
                 <div class="tab-pane fade" id="import">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-upload"></i> رفع بيانات من Excel</div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card mb-2"><div class="card-header bg-info text-white">رفع ملف المرضى</div><div class="card-body"><input type="file" id="patientsExcelFile" class="form-control" accept=".xlsx, .xls"><button class="btn btn-primary mt-2 w-100" onclick="importPatientsFromExcel()"><i class="fas fa-upload"></i> رفع المرضى</button></div></div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="card mb-2"><div class="card-header bg-info text-white">رفع ملف الزيارات</div><div class="card-body"><input type="file" id="visitsExcelFile" class="form-control" accept=".xlsx, .xls"><button class="btn btn-primary mt-2 w-100" onclick="importVisitsFromExcel()"><i class="fas fa-upload"></i> رفع الزيارات</button></div></div>
-                                </div>
+                                <div class="col-md-6"><div class="card mb-2"><div class="card-header bg-info text-white">رفع ملف المرضى</div><div class="card-body"><input type="file" id="patientsExcelFile" class="form-control" accept=".xlsx, .xls"><button class="btn btn-primary mt-2 w-100" onclick="importPatientsFromExcel()"><i class="fas fa-upload"></i> رفع المرضى</button></div></div></div>
+                                <div class="col-md-6"><div class="card mb-2"><div class="card-header bg-info text-white">رفع ملف الزيارات</div><div class="card-body"><input type="file" id="visitsExcelFile" class="form-control" accept=".xlsx, .xls"><button class="btn btn-primary mt-2 w-100" onclick="importVisitsFromExcel()"><i class="fas fa-upload"></i> رفع الزيارات</button></div></div></div>
                             </div>
-                            <div class="row mt-2">
-                                <div class="col-md-6"><button class="btn btn-success w-100" onclick="downloadPatientsTemplate()"><i class="fas fa-download"></i> تحميل ملف المرضى (Excel)</button></div>
-                                <div class="col-md-6"><button class="btn btn-success w-100" onclick="downloadVisitsTemplate()"><i class="fas fa-download"></i> تحميل ملف الزيارات (Excel)</button></div>
-                            </div>
+                            <div class="row mt-2"><div class="col-md-6"><button class="btn btn-success w-100" onclick="downloadPatientsTemplate()"><i class="fas fa-download"></i> تحميل نموذج المرضى</button></div><div class="col-md-6"><button class="btn btn-success w-100" onclick="downloadVisitsTemplate()"><i class="fas fa-download"></i> تحميل نموذج الزيارات</button></div></div>
                             <div id="importResult" class="mt-3"></div>
                         </div>
                     </div>
@@ -243,36 +217,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="app.js"></script>
     <script>
-        function toggleMode() {
-            document.body.classList.toggle('dark-mode');
-            const btn = document.getElementById('modeToggle');
-            btn.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        }
-        function calculateRemaining() {
-            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
-            const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
-            document.getElementById('remainingAmount').value = Math.max(0, total - paid);
-        }
+        function toggleMode() { document.body.classList.toggle('dark-mode'); const btn = document.getElementById('modeToggle'); btn.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>'; }
+        function calculateRemaining() { const total = parseFloat(document.getElementById('totalAmount').value) || 0; const paid = parseFloat(document.getElementById('paidAmount').value) || 0; document.getElementById('remainingAmount').value = Math.max(0, total - paid); }
         let medicineCounter = 1;
-        function addMedicineRow() {
-            const container = document.getElementById('medicinesList');
-            const newRow = document.createElement('div');
-            newRow.className = 'medicine-row';
-            newRow.innerHTML = `<input type="text" class="form-control" placeholder="اسم الدواء" id="medName${medicineCounter}"><input type="number" class="form-control" placeholder="العدد" id="medQty${medicineCounter}" value="1" min="1"><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>`;
-            container.appendChild(newRow);
-            medicineCounter++;
-        }
-        function getMedicinesString() {
-            let medicines = [];
-            for (let i = 0; i <= medicineCounter; i++) {
-                const nameInput = document.getElementById(`medName${i}`);
-                const qtyInput = document.getElementById(`medQty${i}`);
-                if (nameInput && nameInput.value.trim()) medicines.push(`${nameInput.value.trim()} (${qtyInput ? qtyInput.value : 1})`);
-            }
-            return medicines.join('، ');
-        }
-        window.getMedicinesString = getMedicinesString;
-        window.addMedicineRow = addMedicineRow;
+        function addMedicineRow() { const container = document.getElementById('medicinesList'); const newRow = document.createElement('div'); newRow.className = 'medicine-row'; newRow.innerHTML = `<input type="text" class="form-control" placeholder="اسم الدواء" id="medName${medicineCounter}"><input type="number" class="form-control" placeholder="العدد" id="medQty${medicineCounter}" value="1" min="1"><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>`; container.appendChild(newRow); medicineCounter++; }
+        function getMedicinesString() { let medicines = []; for (let i = 0; i <= medicineCounter; i++) { const name = document.getElementById(`medName${i}`)?.value; const qty = document.getElementById(`medQty${i}`)?.value; if (name?.trim()) medicines.push(`${name.trim()} (${qty || 1})`); } return medicines.join('، '); }
+        window.getMedicinesString = getMedicinesString; window.addMedicineRow = addMedicineRow;
     </script>
 </body>
 </html>

@@ -21,6 +21,16 @@ let currentHistoryData = [];
 let currentFinanceData = [];
 let medicineCounter = 1;
 
+// دالة لتنسيق التاريخ بشكل صحيح
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    if (dateStr.includes('/')) {
+        let parts = dateStr.split('/');
+        if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+    }
+    return dateStr;
+}
+
 function loadPatientsList() {
     const patientsRef = ref(db, 'patients');
     onValue(patientsRef, (snapshot) => {
@@ -197,7 +207,15 @@ window.getFinancialReportAutocomplete = async () => {
         periodTotal += v.totalAmount || 0;
         periodPaid += v.paidAmount || 0;
         periodRemaining += v.remainingAmount || 0;
-        tableHtml += `<tr><td>${v.date}</td><td>${v.patientName}</td><td>${(v.diagnosis || '-').substring(0, 30)}</td><td>${(v.medicines || '-').substring(0, 20)}</td><td class="text-primary">${v.totalAmount || 0}</td><td class="text-success">${v.paidAmount || 0}</td><td class="text-warning">${v.remainingAmount || 0}</td></tr>`;
+        tableHtml += `<tr>
+            <td>${v.date || '-'}</td>
+            <td>${v.patientName || '-'}</td>
+            <td>${(v.diagnosis || '-').substring(0, 30)}</td>
+            <td>${(v.medicines || '-').substring(0, 20)}</td>
+            <td class="text-primary">${v.totalAmount || 0}</td>
+            <td class="text-success">${v.paidAmount || 0}</td>
+            <td class="text-warning">${v.remainingAmount || 0}</td>
+        </tr>`;
     }
     if (periodVisits.length === 0) tableHtml += '<tr><td colspan="7" class="text-center">لا توجد زيارات في هذه الفترة</td></tr>';
     tableHtml += `</tbody><tfoot class="table-info"><tr><td colspan="4"><strong>الإجمالي</strong></td><td><strong>${periodTotal} د.أ</strong></td><td><strong>${periodPaid} د.أ</strong></td><td><strong>${periodRemaining} د.أ</strong></td></tr></tfoot></table>`;
@@ -214,52 +232,147 @@ window.getFinancialReportAutocomplete = async () => {
     currentFinanceData = periodVisits;
 };
 
+// تصدير التاريخ الطبي إلى Excel
 window.exportHistoryToExcel = () => {
     if (!currentHistoryData.length) return alert('⚠️ لا توجد بيانات للتصدير');
-    const data = currentHistoryData.map(v => ({ 'التاريخ': v.date, 'الوقت': v.time, 'اسم المريض': v.patientName, 'التشخيص': v.diagnosis, 'الأدوية': v.medicines, 'المبلغ الإجمالي (د.أ)': v.totalAmount || 0, 'المبلغ المدفوع (د.أ)': v.paidAmount || 0, 'المبلغ المتبقي (د.أ)': v.remainingAmount || 0 }));
+    const data = currentHistoryData.map(v => ({ 
+        'التاريخ': v.date || '', 
+        'الوقت': v.time || '', 
+        'اسم المريض': v.patientName || '', 
+        'التشخيص': v.diagnosis || '', 
+        'الأدوية': v.medicines || '', 
+        'المبلغ الإجمالي (د.أ)': v.totalAmount || 0, 
+        'المبلغ المدفوع (د.أ)': v.paidAmount || 0, 
+        'المبلغ المتبقي (د.أ)': v.remainingAmount || 0 
+    }));
     const ws = XLSX.utils.json_to_sheet(data);
+    // تنسيق الأعمدة
+    ws['!cols'] = [{wch:12},{wch:10},{wch:15},{wch:25},{wch:25},{wch:12},{wch:12},{wch:12}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'التاريخ الطبي');
     XLSX.writeFile(wb, `history_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
-    alert('✅ تم التصدير');
+    alert('✅ تم التصدير إلى Excel');
 };
 
-window.exportHistoryToPDF = async () => {
+// تصدير التاريخ الطبي إلى PDF
+window.exportHistoryToPDF = () => {
     if (!currentHistoryData.length) return alert('⚠️ لا توجد بيانات للتصدير');
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.addFileToVFS('Cairo-Regular.ttf', arabicFont); // سيتم إضافة الخط
-    doc.addFont('Cairo-Regular.ttf', 'Cairo', 'normal');
-    doc.setFont('Cairo');
-    doc.text('التاريخ الطبي', 14, 10);
-    doc.autoTable({ head: [['التاريخ', 'اسم المريض', 'التشخيص', 'الأدوية', 'الإجمالي', 'المدفوع', 'المتبقي']], body: currentHistoryData.map(v => [v.date, v.patientName, v.diagnosis, v.medicines, v.totalAmount, v.paidAmount, v.remainingAmount]), styles: { font: 'Cairo', fontSize: 8 }, headStyles: { fillColor: [26, 95, 122] } });
-    doc.save(`history_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
-    alert('✅ تم التصدير');
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        
+        doc.setFont('helvetica');
+        doc.setFontSize(16);
+        doc.text('التاريخ الطبي', 14, 15);
+        doc.setFontSize(10);
+        doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}`, 14, 22);
+        
+        const tableData = currentHistoryData.map(v => [
+            v.date || '',
+            v.patientName || '',
+            (v.diagnosis || '-').substring(0, 40),
+            (v.medicines || '-').substring(0, 30),
+            (v.totalAmount || 0).toString(),
+            (v.paidAmount || 0).toString(),
+            (v.remainingAmount || 0).toString()
+        ]);
+        
+        doc.autoTable({
+            head: [['التاريخ', 'المريض', 'التشخيص', 'الأدوية', 'الإجمالي', 'المدفوع', 'المتبقي']],
+            body: tableData,
+            startY: 28,
+            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+            headStyles: { fillColor: [26, 95, 122], textColor: 255, halign: 'right' },
+            alternateRowStyles: { fillColor: [240, 240, 240] },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 30 },
+                2: { cellWidth: 45 },
+                3: { cellWidth: 40 },
+                4: { cellWidth: 20 },
+                5: { cellWidth: 20 },
+                6: { cellWidth: 20 }
+            }
+        });
+        
+        doc.save(`history_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
+        alert('✅ تم التصدير إلى PDF');
+    } catch(e) {
+        console.error(e);
+        alert('❌ خطأ في تصدير PDF: ' + e.message);
+    }
 };
 
+// تصدير التقرير المالي إلى Excel
 window.exportFinanceToExcel = () => {
     if (!currentFinanceData.length) return alert('⚠️ لا توجد بيانات للتصدير');
-    const data = currentFinanceData.map(v => ({ 'التاريخ': v.date, 'اسم المريض': v.patientName, 'التشخيص': v.diagnosis, 'الأدوية': v.medicines, 'المبلغ الإجمالي (د.أ)': v.totalAmount || 0, 'المبلغ المدفوع (د.أ)': v.paidAmount || 0, 'المبلغ المتبقي (د.أ)': v.remainingAmount || 0 }));
+    const data = currentFinanceData.map(v => ({ 
+        'التاريخ': v.date || '', 
+        'اسم المريض': v.patientName || '', 
+        'التشخيص': v.diagnosis || '', 
+        'الأدوية': v.medicines || '', 
+        'المبلغ الإجمالي (د.أ)': v.totalAmount || 0, 
+        'المبلغ المدفوع (د.أ)': v.paidAmount || 0, 
+        'المبلغ المتبقي (د.أ)': v.remainingAmount || 0 
+    }));
     const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{wch:12},{wch:15},{wch:25},{wch:25},{wch:12},{wch:12},{wch:12}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'التقرير المالي');
     XLSX.writeFile(wb, `finance_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
-    alert('✅ تم التصدير');
+    alert('✅ تم التصدير إلى Excel');
 };
 
-window.exportFinanceToPDF = async () => {
+// تصدير التقرير المالي إلى PDF
+window.exportFinanceToPDF = () => {
     if (!currentFinanceData.length) return alert('⚠️ لا توجد بيانات للتصدير');
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.addFileToVFS('Cairo-Regular.ttf', arabicFont);
-    doc.addFont('Cairo-Regular.ttf', 'Cairo', 'normal');
-    doc.setFont('Cairo');
-    doc.text('التقرير المالي', 14, 10);
-    doc.autoTable({ head: [['التاريخ', 'اسم المريض', 'التشخيص', 'الأدوية', 'الإجمالي', 'المدفوع', 'المتبقي']], body: currentFinanceData.map(v => [v.date, v.patientName, v.diagnosis, v.medicines, v.totalAmount, v.paidAmount, v.remainingAmount]), styles: { font: 'Cairo', fontSize: 8 }, headStyles: { fillColor: [26, 95, 122] } });
-    doc.save(`finance_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
-    alert('✅ تم التصدير');
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        
+        doc.setFont('helvetica');
+        doc.setFontSize(16);
+        doc.text('التقرير المالي', 14, 15);
+        doc.setFontSize(10);
+        doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}`, 14, 22);
+        
+        const tableData = currentFinanceData.map(v => [
+            v.date || '',
+            v.patientName || '',
+            (v.diagnosis || '-').substring(0, 40),
+            (v.medicines || '-').substring(0, 30),
+            (v.totalAmount || 0).toString(),
+            (v.paidAmount || 0).toString(),
+            (v.remainingAmount || 0).toString()
+        ]);
+        
+        doc.autoTable({
+            head: [['التاريخ', 'المريض', 'التشخيص', 'الأدوية', 'الإجمالي', 'المدفوع', 'المتبقي']],
+            body: tableData,
+            startY: 28,
+            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+            headStyles: { fillColor: [26, 95, 122], textColor: 255, halign: 'right' },
+            alternateRowStyles: { fillColor: [240, 240, 240] },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 30 },
+                2: { cellWidth: 45 },
+                3: { cellWidth: 40 },
+                4: { cellWidth: 20 },
+                5: { cellWidth: 20 },
+                6: { cellWidth: 20 }
+            }
+        });
+        
+        doc.save(`finance_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`);
+        alert('✅ تم التصدير إلى PDF');
+    } catch(e) {
+        console.error(e);
+        alert('❌ خطأ في تصدير PDF: ' + e.message);
+    }
 };
 
+// رفع المرضى من Excel
 window.importPatientsFromExcel = () => {
     const file = document.getElementById('patientsExcelFile').files[0];
     if (!file) return alert('⚠️ مطلوب اختيار ملف');
@@ -282,6 +395,7 @@ window.importPatientsFromExcel = () => {
     reader.readAsArrayBuffer(file);
 };
 
+// رفع الزيارات من Excel
 window.importVisitsFromExcel = () => {
     const file = document.getElementById('visitsExcelFile').files[0];
     if (!file) return alert('⚠️ مطلوب اختيار ملف');
@@ -317,17 +431,21 @@ window.importVisitsFromExcel = () => {
     reader.readAsArrayBuffer(file);
 };
 
+// تحميل نموذج المرضى
 window.downloadPatientsTemplate = () => {
     const template = [{ 'الاسم': 'مثال محمد', 'الجوال': '0791234567', 'العنوان': 'عمان' }];
     const ws = XLSX.utils.json_to_sheet(template);
+    ws['!cols'] = [{wch:20},{wch:15},{wch:20}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'المرضى');
     XLSX.writeFile(wb, 'patients_template.xlsx');
 };
 
+// تحميل نموذج الزيارات
 window.downloadVisitsTemplate = () => {
     const template = [{ 'اسم المريض': 'مثال محمد', 'التاريخ': '30/05/2026', 'التشخيص': 'نزلة برد', 'الأدوية': 'بنادول (2)', 'المبلغ الإجمالي': 50, 'المبلغ المدفوع': 30, 'المبلغ المتبقي': 20 }];
     const ws = XLSX.utils.json_to_sheet(template);
+    ws['!cols'] = [{wch:15},{wch:12},{wch:20},{wch:20},{wch:12},{wch:12},{wch:12}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'الزيارات');
     XLSX.writeFile(wb, 'visits_template.xlsx');
