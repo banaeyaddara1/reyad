@@ -2,22 +2,25 @@
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>صيدلية فراس - نظام إدارة العيادة</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- jQuery UI للـ Autocomplete -->
+    <!-- jQuery UI -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/smoothness/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <!-- Animate.css للحركات -->
+    <!-- مكتبات التصدير -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
         * { font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* الوضع الفاتح (النهاري) */
         :root {
             --bg-gradient-start: #1a5f7a;
             --bg-gradient-end: #0d3b3b;
@@ -33,7 +36,6 @@
             --shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
         
-        /* الوضع الليلي (الافتراضي) */
         body.dark-mode {
             --bg-gradient-start: #0a1a1a;
             --bg-gradient-end: #061212;
@@ -49,21 +51,18 @@
             --shadow: 0 15px 35px rgba(0,0,0,0.3);
         }
         
-        /* تطبيق الوضع الليلي افتراضياً */
         body {
-            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            background: linear-gradient(135deg, #0a1a1a 0%, #061212 100%);
             min-height: 100vh;
             padding: 20px;
             color: var(--text-color);
             transition: all 0.3s ease;
-            position: relative;
         }
         
         body.dark-mode {
             background: linear-gradient(135deg, #0a1a1a 0%, #061212 100%);
         }
         
-        /* تأثير الخلفية المتحركة */
         body::before {
             content: '';
             position: fixed;
@@ -88,7 +87,6 @@
             z-index: 1;
         }
         
-        /* ترويسة مميزة */
         .custom-header {
             background: var(--header-bg);
             padding: 25px 30px;
@@ -128,30 +126,27 @@
             border-radius: 25px;
             padding: 12px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.25);
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: transform 0.3s;
         }
         
         .logo-img:hover {
             transform: scale(1.05) rotate(3deg);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
         }
         
         .header-text h1 {
             font-size: 2rem;
             margin-bottom: 8px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             color: var(--header-text-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
         .header-text p {
             font-size: 1.1rem;
-            opacity: 0.95;
             color: var(--header-text-color);
         }
         
         .since-text {
             font-size: 1rem;
-            opacity: 0.85;
             color: var(--header-text-color);
             background: rgba(0,0,0,0.2);
             padding: 8px 15px;
@@ -170,7 +165,6 @@
             color: var(--text-color); 
             font-weight: 500; 
             padding: 15px 25px; 
-            margin-right: 5px; 
             transition: all 0.3s; 
             opacity: 0.7;
             position: relative;
@@ -193,13 +187,7 @@
             width: 80%;
         }
         
-        .nav-tabs .nav-link:hover { 
-            opacity: 1;
-        }
-        
-        .nav-tabs .nav-link.active { 
-            opacity: 1;
-        }
+        .nav-tabs .nav-link.active { opacity: 1; }
         
         .tab-content { padding: 25px; }
         
@@ -209,12 +197,11 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.08); 
             margin-bottom: 25px; 
             background: var(--card-bg);
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: transform 0.3s;
         }
         
         .dashboard-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
         }
         
         .card-header { 
@@ -223,11 +210,6 @@
             border-radius: 20px 20px 0 0 !important; 
             padding: 15px 25px; 
             font-weight: bold;
-            font-size: 1.2rem;
-        }
-        
-        .card-header i {
-            margin-left: 10px;
         }
         
         .btn-primary { 
@@ -235,7 +217,6 @@
             border: none; 
             border-radius: 12px;
             padding: 10px 20px;
-            font-weight: bold;
             transition: all 0.3s;
         }
         
@@ -244,74 +225,23 @@
             box-shadow: 0 10px 25px rgba(26,95,122,0.4); 
         }
         
-        .btn-danger {
-            border-radius: 10px;
-            transition: all 0.3s;
-        }
-        
-        .btn-danger:hover {
-            transform: scale(1.05);
-        }
-        
-        .table-responsive { 
-            max-height: 500px; 
-            overflow-y: auto; 
-            border-radius: 15px; 
-        }
-        
-        .table {
-            color: var(--text-color);
-        }
-        
-        .table thead th {
-            background: var(--table-header);
+        .btn-export {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            border: none;
             color: white;
-            padding: 12px;
-            font-weight: bold;
         }
         
-        .table tbody tr {
-            transition: background 0.2s;
-        }
+        .table-responsive { max-height: 500px; overflow-y: auto; border-radius: 15px; }
+        .table { color: var(--text-color); }
+        .table thead th { background: var(--table-header); color: white; padding: 12px; }
+        .table tbody tr:hover { background: var(--border-color); }
         
-        .table tbody tr:hover {
-            background: var(--border-color);
-        }
+        .search-box { background: var(--border-color); border-radius: 50px; padding: 5px 20px; }
+        .search-box input { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 25px; padding: 8px 15px; }
         
-        .search-box { 
-            background: var(--border-color); 
-            border-radius: 50px; 
-            padding: 5px 20px; 
-        }
+        .total-box { background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%); color: white; border-radius: 25px; padding: 30px; text-align: center; margin-top: 20px; }
         
-        .search-box input {
-            background: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            border-radius: 25px;
-            padding: 8px 15px;
-        }
-        
-        .total-box { 
-            background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%); 
-            color: white; 
-            border-radius: 25px; 
-            padding: 30px; 
-            text-align: center;
-            margin-top: 20px;
-            transition: all 0.3s;
-        }
-        
-        .total-box:hover {
-            transform: scale(1.02);
-        }
-        
-        footer { 
-            text-align: center; 
-            padding: 20px; 
-            color: var(--footer-text); 
-            font-size: 14px; 
-        }
+        footer { text-align: center; padding: 20px; color: var(--footer-text); font-size: 14px; }
         
         .mode-toggle {
             position: fixed;
@@ -330,147 +260,50 @@
             color: var(--text-color);
         }
         
-        .mode-toggle:hover {
-            transform: scale(1.1) rotate(15deg);
+        .mode-toggle:hover { transform: scale(1.1) rotate(15deg); }
+        
+        .payment-details { background: var(--border-color); border-radius: 15px; padding: 15px; margin-top: 10px; }
+        .filter-card { background: var(--border-color); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        .custom-progress { background: rgba(255,255,255,0.2); border-radius: 50px; overflow: hidden; height: 30px; }
+        .custom-progress-bar { background: #38ef7d; height: 100%; border-radius: 50px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #000; }
+        
+        .ui-autocomplete { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--nav-active); border-radius: 15px; max-height: 250px; overflow-y: auto; z-index: 2000; }
+        .ui-autocomplete li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .ui-autocomplete li:hover { background: var(--nav-active); color: white; }
+        .patient-result { display: flex; justify-content: space-between; align-items: center; }
+        .patient-name { font-weight: bold; }
+        .patient-phone { font-size: 11px; opacity: 0.7; }
+        
+        .opening-balance {
+            background: linear-gradient(135deg, #ffd89b, #19547b);
+            color: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .btn-group-custom {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
         
         @media (max-width: 768px) {
             .nav-tabs .nav-link { padding: 10px 12px; font-size: 12px; }
-            .tab-content { padding: 15px; }
-            .header-text h1 { font-size: 1.3rem; }
-            .logo-img { width: 70px; height: 70px; }
-            .since-text { font-size: 0.8rem; }
+            .logo-img { width: 60px; height: 60px; }
+            .header-text h1 { font-size: 1.2rem; }
         }
         
-        @media (max-width: 480px) {
-            .logo-img { width: 55px; height: 55px; }
-            .header-text h1 { font-size: 1rem; }
-            .header-text p { font-size: 0.8rem; }
-        }
-        
-        .payment-details {
-            background: var(--border-color);
-            border-radius: 15px;
-            padding: 15px;
-            margin-top: 10px;
-        }
-        
-        .filter-card {
-            background: var(--border-color);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        /* تنسيق الـ Autocomplete الجذاب */
-        .ui-autocomplete {
-            background: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--nav-active);
-            border-radius: 15px;
-            max-height: 250px;
-            overflow-y: auto;
-            z-index: 2000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .ui-autocomplete li {
-            padding: 12px 15px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .ui-autocomplete li:last-child {
-            border-bottom: none;
-        }
-        
-        .ui-autocomplete li:hover {
-            background: var(--nav-active);
-            color: white;
-        }
-        
-        .patient-result {
+        .medicine-row {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .patient-name {
-            font-weight: bold;
-            font-size: 1rem;
-        }
-        
-        .patient-phone {
-            font-size: 11px;
-            opacity: 0.7;
-        }
-        
-        /* بطاقات إحصائية */
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            padding: 20px;
-            text-align: center;
-            color: white;
-            transition: all 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .stat-card i {
-            font-size: 2.5rem;
+            gap: 10px;
             margin-bottom: 10px;
-        }
-        
-        .stat-card h2 {
-            font-size: 2rem;
-            font-weight: bold;
-        }
-        
-        /* شريط التقدم المخصص */
-        .custom-progress {
-            background: rgba(255,255,255,0.2);
-            border-radius: 50px;
-            overflow: hidden;
-            height: 30px;
-        }
-        
-        .custom-progress-bar {
-            background: #38ef7d;
-            height: 100%;
-            border-radius: 50px;
-            transition: width 0.5s ease;
-            display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-            color: #000;
         }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--nav-active);
-            box-shadow: 0 0 0 0.2rem rgba(26,95,122,0.25);
-        }
-        
-        /* تحسين لون النص في المود النهاري في الترويسة */
-        body:not(.dark-mode) .custom-header {
-            background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%);
-        }
-        
-        body:not(.dark-mode) .custom-header h1,
-        body:not(.dark-mode) .custom-header p,
-        body:not(.dark-mode) .custom-header .since-text {
-            color: #ffffff;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        
-        body:not(.dark-mode) .custom-header .since-text {
-            background: rgba(0,0,0,0.25);
-        }
+        .medicine-row input:first-child { flex: 2; }
+        .medicine-row input:last-child { flex: 0.5; }
     </style>
 </head>
 <body class="dark-mode">
@@ -480,7 +313,6 @@
 
     <div class="container">
         <div class="main-card animate__animated animate__fadeInUp">
-            <!-- Header مميز مع لوجو -->
             <div class="custom-header">
                 <div class="logo-container">
                     <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
@@ -492,16 +324,16 @@
                 </div>
             </div>
 
-            <!-- Tabs -->
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#import"><i class="fas fa-upload"></i> رفع بيانات</button></li>
             </ul>
 
             <div class="tab-content">
-                <!-- ===================== تبويب المرضى ===================== -->
+                <!-- تبويب المرضى -->
                 <div class="tab-pane fade show active" id="patients">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-user-plus"></i> إضافة مريض جديد</div>
@@ -523,7 +355,7 @@
                     </div>
                 </div>
 
-                <!-- ===================== تبويب إدخال زيارة ===================== -->
+                <!-- تبويب إدخال زيارة -->
                 <div class="tab-pane fade" id="visits">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
@@ -534,7 +366,16 @@
                                 <input type="hidden" id="selectedPatientId" value="">
                             </div>
                             <div class="mb-3"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
-                            <div class="mb-3"><label class="form-label"><i class="fas fa-pills"></i> العلاج / الإجراء</label><textarea id="treatment" class="form-control" rows="2" placeholder="العلاج الموصوف..."></textarea></div>
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-pills"></i> الأدوية الموصوفة</label>
+                                <div id="medicinesList">
+                                    <div class="medicine-row">
+                                        <input type="text" class="form-control" placeholder="اسم الدواء" id="medName0">
+                                        <input type="number" class="form-control" placeholder="العدد" id="medQty0" value="1" min="1" style="width: 100px;">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="addMedicineRow()"><i class="fas fa-plus"></i> إضافة دواء آخر</button>
+                            </div>
                             <div class="row mb-3">
                                 <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
                                 <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
@@ -545,7 +386,7 @@
                     </div>
                 </div>
 
-                <!-- ===================== تبويب التاريخ الطبي ===================== -->
+                <!-- تبويب التاريخ الطبي -->
                 <div class="tab-pane fade" id="history">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-search"></i> البحث في التاريخ الطبي</div>
@@ -555,13 +396,17 @@
                                 <input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث">
                                 <input type="hidden" id="historySelectedPatientId" value="">
                             </div>
-                            <button class="btn btn-primary w-100" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
+                            <button class="btn btn-primary" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
+                            <div class="btn-group-custom">
+                                <button class="btn btn-success btn-export" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button>
+                                <button class="btn btn-danger" onclick="exportHistoryToPDF()"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button>
+                            </div>
                             <div id="historyResult" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ===================== تبويب التقارير المالية ===================== -->
+                <!-- تبويب التقارير المالية -->
                 <div class="tab-pane fade" id="finance">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
@@ -587,7 +432,41 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="btn-group-custom">
+                                <button class="btn btn-success btn-export" onclick="exportFinanceToExcel()"><i class="fas fa-file-excel"></i> تصدير التقرير إلى Excel</button>
+                                <button class="btn btn-danger" onclick="exportFinanceToPDF()"><i class="fas fa-file-pdf"></i> تصدير التقرير إلى PDF</button>
+                            </div>
                             <div id="financeResult"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تبويب رفع البيانات -->
+                <div class="tab-pane fade" id="import">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fas fa-upload"></i> رفع بيانات من Excel</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-info text-white">رفع ملف المرضى</div>
+                                        <div class="card-body">
+                                            <input type="file" id="patientsExcelFile" class="form-control" accept=".xlsx, .xls">
+                                            <button class="btn btn-primary mt-3" onclick="importPatientsFromExcel()"><i class="fas fa-upload"></i> رفع المرضى</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-info text-white">رفع ملف الزيارات</div>
+                                        <div class="card-body">
+                                            <input type="file" id="visitsExcelFile" class="form-control" accept=".xlsx, .xls">
+                                            <button class="btn btn-primary mt-3" onclick="importVisitsFromExcel()"><i class="fas fa-upload"></i> رفع الزيارات</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="importResult" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
@@ -605,32 +484,40 @@
         function toggleMode() {
             document.body.classList.toggle('dark-mode');
             const btn = document.getElementById('modeToggle');
-            if (document.body.classList.contains('dark-mode')) {
-                btn.innerHTML = '<i class="fas fa-sun"></i>';
-            } else {
-                btn.innerHTML = '<i class="fas fa-moon"></i>';
-            }
+            btn.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         }
         
         function calculateRemaining() {
             const total = parseFloat(document.getElementById('totalAmount').value) || 0;
             const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
-            const remaining = total - paid;
-            document.getElementById('remainingAmount').value = remaining >= 0 ? remaining : 0;
+            document.getElementById('remainingAmount').value = Math.max(0, total - paid);
         }
         
-        // مراقبة تغيير حقل البحث المالي لإعادة تعيين التقرير عند مسحه
-        document.addEventListener('DOMContentLoaded', function() {
-            const financeSearch = document.getElementById('financePatientSearch');
-            if (financeSearch) {
-                financeSearch.addEventListener('input', function() {
-                    if (this.value === '') {
-                        document.getElementById('financeSelectedPatientId').value = '';
-                        getFinancialReportAutocomplete();
-                    }
-                });
+        let medicineCounter = 1;
+        function addMedicineRow() {
+            const container = document.getElementById('medicinesList');
+            const newRow = document.createElement('div');
+            newRow.className = 'medicine-row';
+            newRow.innerHTML = `
+                <input type="text" class="form-control" placeholder="اسم الدواء" id="medName${medicineCounter}">
+                <input type="number" class="form-control" placeholder="العدد" id="medQty${medicineCounter}" value="1" min="1" style="width: 100px;">
+                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(newRow);
+            medicineCounter++;
+        }
+        
+        function getMedicinesString() {
+            let medicines = [];
+            for (let i = 0; i < medicineCounter; i++) {
+                const name = document.getElementById(`medName${i}`)?.value;
+                const qty = document.getElementById(`medQty${i}`)?.value;
+                if (name && name.trim()) {
+                    medicines.push(`${name} (${qty || 1})`);
+                }
             }
-        });
+            return medicines.join(', ');
+        }
     </script>
 </body>
 </html>
