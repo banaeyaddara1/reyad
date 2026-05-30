@@ -4,23 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>صيدلية فراس - نظام إدارة العيادة</title>
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- jQuery UI -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/smoothness/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <!-- مكتبات التصدير -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <!-- Animate.css -->
+    <script src="https://unpkg.com/@jspdf/arabic-fonts@1.0.0/dist/index.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
-        * { font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * { font-family: 'Segoe UI', 'Cairo', 'Tahoma', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --bg-gradient-start: #1a5f7a;
             --bg-gradient-end: #0d3b3b;
@@ -35,7 +29,6 @@
             --border-color: #ddd;
             --shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
-        
         body.dark-mode {
             --bg-gradient-start: #0a1a1a;
             --bg-gradient-end: #061212;
@@ -50,7 +43,6 @@
             --border-color: #3a4a4a;
             --shadow: 0 15px 35px rgba(0,0,0,0.3);
         }
-        
         body {
             background: linear-gradient(135deg, #0a1a1a 0%, #061212 100%);
             min-height: 100vh;
@@ -58,11 +50,6 @@
             color: var(--text-color);
             transition: all 0.3s ease;
         }
-        
-        body.dark-mode {
-            background: linear-gradient(135deg, #0a1a1a 0%, #061212 100%);
-        }
-        
         body::before {
             content: '';
             position: fixed;
@@ -75,247 +62,68 @@
             pointer-events: none;
             z-index: 0;
         }
-        
-        .main-card { 
-            background: var(--card-bg); 
-            border-radius: 30px; 
-            box-shadow: var(--shadow); 
-            overflow: hidden; 
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            position: relative;
-            z-index: 1;
-        }
-        
-        .custom-header {
-            background: var(--header-bg);
-            padding: 25px 30px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .custom-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 25px;
-            flex-wrap: wrap;
-        }
-        
-        .logo-img {
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            background: white;
-            border-radius: 25px;
-            padding: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
-            transition: transform 0.3s;
-        }
-        
-        .logo-img:hover {
-            transform: scale(1.05) rotate(3deg);
-        }
-        
-        .header-text h1 {
-            font-size: 2rem;
-            margin-bottom: 8px;
-            color: var(--header-text-color);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .header-text p {
-            font-size: 1.1rem;
-            color: var(--header-text-color);
-        }
-        
-        .since-text {
-            font-size: 1rem;
-            color: var(--header-text-color);
-            background: rgba(0,0,0,0.2);
-            padding: 8px 15px;
-            border-radius: 50px;
-            display: inline-block;
-        }
-        
-        .nav-tabs { 
-            border-bottom: 2px solid var(--border-color); 
-            padding: 0 20px; 
-            background: var(--card-bg); 
-        }
-        
-        .nav-tabs .nav-link { 
-            border: none; 
-            color: var(--text-color); 
-            font-weight: 500; 
-            padding: 15px 25px; 
-            transition: all 0.3s; 
-            opacity: 0.7;
-            position: relative;
-        }
-        
-        .nav-tabs .nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            right: 50%;
-            width: 0;
-            height: 3px;
-            background: var(--nav-active);
-            transition: all 0.3s;
-            transform: translateX(50%);
-        }
-        
-        .nav-tabs .nav-link:hover::after,
-        .nav-tabs .nav-link.active::after {
-            width: 80%;
-        }
-        
+        .main-card { background: var(--card-bg); border-radius: 30px; box-shadow: var(--shadow); overflow: hidden; backdrop-filter: blur(10px); position: relative; z-index: 1; }
+        .custom-header { background: var(--header-bg); padding: 20px 30px; position: relative; overflow: hidden; }
+        .custom-header::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: rotate 20s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .logo-container { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .logo-img { width: 80px; height: 80px; object-fit: contain; background: white; border-radius: 20px; padding: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: transform 0.3s; }
+        .logo-img:hover { transform: scale(1.05) rotate(3deg); }
+        .header-text h1 { font-size: 1.8rem; margin-bottom: 5px; color: var(--header-text-color); text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .header-text p { font-size: 1rem; color: var(--header-text-color); }
+        .since-text { font-size: 0.9rem; color: var(--header-text-color); background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 50px; display: inline-block; }
+        .nav-tabs { border-bottom: 2px solid var(--border-color); padding: 0 15px; background: var(--card-bg); flex-wrap: wrap; }
+        .nav-tabs .nav-link { border: none; color: var(--text-color); font-weight: 500; padding: 12px 20px; transition: all 0.3s; opacity: 0.7; position: relative; }
+        .nav-tabs .nav-link::after { content: ''; position: absolute; bottom: 0; right: 50%; width: 0; height: 3px; background: var(--nav-active); transition: all 0.3s; transform: translateX(50%); }
+        .nav-tabs .nav-link:hover::after, .nav-tabs .nav-link.active::after { width: 80%; }
         .nav-tabs .nav-link.active { opacity: 1; }
-        
-        .tab-content { padding: 25px; }
-        
-        .dashboard-card { 
-            border: none; 
-            border-radius: 20px; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08); 
-            margin-bottom: 25px; 
-            background: var(--card-bg);
-            transition: transform 0.3s;
-        }
-        
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .card-header { 
-            background: var(--header-bg); 
-            color: white; 
-            border-radius: 20px 20px 0 0 !important; 
-            padding: 15px 25px; 
-            font-weight: bold;
-        }
-        
-        .btn-primary { 
-            background: var(--btn-bg); 
-            border: none; 
-            border-radius: 12px;
-            padding: 10px 20px;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary:hover { 
-            transform: translateY(-3px); 
-            box-shadow: 0 10px 25px rgba(26,95,122,0.4); 
-        }
-        
-        .btn-export {
-            background: linear-gradient(135deg, #11998e, #38ef7d);
-            border: none;
-            color: white;
-        }
-        
-        .table-responsive { max-height: 500px; overflow-y: auto; border-radius: 15px; }
-        .table { color: var(--text-color); }
-        .table thead th { background: var(--table-header); color: white; padding: 12px; }
+        .tab-content { padding: 20px; }
+        .dashboard-card { border: none; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px; background: var(--card-bg); transition: transform 0.3s; }
+        .dashboard-card:hover { transform: translateY(-3px); }
+        .card-header { background: var(--header-bg); color: white; border-radius: 20px 20px 0 0 !important; padding: 12px 20px; font-weight: bold; }
+        .btn-primary { background: var(--btn-bg); border: none; border-radius: 10px; padding: 8px 18px; transition: all 0.3s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(26,95,122,0.4); }
+        .btn-export-excel { background: linear-gradient(135deg, #1e6f3f, #0d4a2a); border: none; color: white; }
+        .btn-export-pdf { background: linear-gradient(135deg, #dc3545, #9b1c2c); border: none; color: white; }
+        .table-responsive { max-height: 450px; overflow-y: auto; border-radius: 15px; }
+        .table { color: var(--text-color); font-size: 14px; }
+        .table thead th { background: var(--table-header); color: white; padding: 10px; position: sticky; top: 0; }
         .table tbody tr:hover { background: var(--border-color); }
-        
-        .search-box { background: var(--border-color); border-radius: 50px; padding: 5px 20px; }
-        .search-box input { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 25px; padding: 8px 15px; }
-        
-        .total-box { background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%); color: white; border-radius: 25px; padding: 30px; text-align: center; margin-top: 20px; }
-        
-        footer { text-align: center; padding: 20px; color: var(--footer-text); font-size: 14px; }
-        
-        .mode-toggle {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: var(--card-bg);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            transition: all 0.3s;
-            font-size: 1.3rem;
-            color: var(--text-color);
-        }
-        
-        .mode-toggle:hover { transform: scale(1.1) rotate(15deg); }
-        
-        .payment-details { background: var(--border-color); border-radius: 15px; padding: 15px; margin-top: 10px; }
-        .filter-card { background: var(--border-color); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
-        .custom-progress { background: rgba(255,255,255,0.2); border-radius: 50px; overflow: hidden; height: 30px; }
-        .custom-progress-bar { background: #38ef7d; height: 100%; border-radius: 50px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #000; }
-        
-        .ui-autocomplete { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--nav-active); border-radius: 15px; max-height: 250px; overflow-y: auto; z-index: 2000; }
-        .ui-autocomplete li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .search-box { background: var(--border-color); border-radius: 50px; padding: 5px 15px; }
+        .search-box input { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 25px; padding: 6px 12px; }
+        .total-box { background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%); color: white; border-radius: 20px; padding: 20px; text-align: center; margin-top: 20px; }
+        footer { text-align: center; padding: 15px; color: var(--footer-text); font-size: 12px; }
+        .mode-toggle { position: fixed; top: 15px; left: 15px; z-index: 1000; background: var(--card-bg); border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.2); transition: all 0.3s; font-size: 1.2rem; color: var(--text-color); }
+        .mode-toggle:hover { transform: scale(1.1) rotate(10deg); }
+        .payment-details { background: var(--border-color); border-radius: 12px; padding: 12px; margin-top: 10px; }
+        .filter-card { background: var(--border-color); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
+        .custom-progress { background: rgba(255,255,255,0.2); border-radius: 50px; overflow: hidden; height: 25px; }
+        .custom-progress-bar { background: #38ef7d; height: 100%; border-radius: 50px; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #000; }
+        .ui-autocomplete { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--nav-active); border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 2000; }
+        .ui-autocomplete li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .ui-autocomplete li:hover { background: var(--nav-active); color: white; }
         .patient-result { display: flex; justify-content: space-between; align-items: center; }
-        .patient-name { font-weight: bold; }
-        .patient-phone { font-size: 11px; opacity: 0.7; }
-        
-        .opening-balance {
-            background: linear-gradient(135deg, #ffd89b, #19547b);
-            color: white;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .btn-group-custom {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        
-        @media (max-width: 768px) {
-            .nav-tabs .nav-link { padding: 10px 12px; font-size: 12px; }
-            .logo-img { width: 60px; height: 60px; }
-            .header-text h1 { font-size: 1.2rem; }
-        }
-        
-        .medicine-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            align-items: center;
-        }
+        .opening-balance { background: linear-gradient(135deg, #ffd89b, #19547b); color: white; border-radius: 15px; padding: 12px; margin-bottom: 15px; text-align: center; }
+        .btn-group-custom { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+        .medicine-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
         .medicine-row input:first-child { flex: 2; }
-        .medicine-row input:last-child { flex: 0.5; }
+        .medicine-row input:nth-child(2) { width: 80px; }
+        @media (max-width: 768px) {
+            .nav-tabs .nav-link { padding: 8px 12px; font-size: 12px; }
+            .logo-img { width: 55px; height: 55px; }
+            .header-text h1 { font-size: 1.2rem; }
+            .tab-content { padding: 12px; }
+            .btn-group-custom button { font-size: 12px; padding: 5px 10px; }
+        }
     </style>
 </head>
 <body class="dark-mode">
-    <button class="mode-toggle" onclick="toggleMode()" id="modeToggle">
-        <i class="fas fa-sun"></i>
-    </button>
-
+    <button class="mode-toggle" onclick="toggleMode()" id="modeToggle"><i class="fas fa-sun"></i></button>
     <div class="container">
         <div class="main-card animate__animated animate__fadeInUp">
             <div class="custom-header">
                 <div class="logo-container">
-                    <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
+                    <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/80?text=Logo'">
                     <div class="header-text">
                         <h1><i class="fas fa-hospital"></i> صيدلية فراس</h1>
                         <p><i class="fas fa-user-md"></i> دكتور: رياض قواريق | نظام إدارة العيادة المتكامل</p>
@@ -323,7 +131,6 @@
                     </div>
                 </div>
             </div>
-
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
@@ -331,14 +138,13 @@
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#import"><i class="fas fa-upload"></i> رفع بيانات</button></li>
             </ul>
-
             <div class="tab-content">
-                <!-- تبويب المرضى -->
+                <!-- المرضى -->
                 <div class="tab-pane fade show active" id="patients">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-user-plus"></i> إضافة مريض جديد</div>
                         <div class="card-body">
-                            <div class="row g-3">
+                            <div class="row g-2">
                                 <div class="col-md-4"><input type="text" id="patientName" class="form-control" placeholder="الاسم الكامل *"></div>
                                 <div class="col-md-3"><input type="tel" id="patientPhone" class="form-control" placeholder="رقم الجوال"></div>
                                 <div class="col-md-3"><input type="text" id="patientAddress" class="form-control" placeholder="العنوان"></div>
@@ -349,122 +155,82 @@
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-list"></i> قائمة المرضى</div>
                         <div class="card-body">
-                            <div class="search-box mb-3 d-flex align-items-center gap-2"><i class="fas fa-search"></i> <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()"></div>
+                            <div class="search-box mb-2 d-flex align-items-center gap-2"><i class="fas fa-search"></i> <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()"></div>
                             <div id="patientsList" class="table-responsive"></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- تبويب إدخال زيارة -->
+                <!-- إدخال زيارة -->
                 <div class="tab-pane fade" id="visits">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
+                            <div class="mb-2">
+                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض (مطلوب)</label>
                                 <input type="text" id="patientSearchInput" class="form-control" placeholder="اكتب اسم المريض (سيظهر اقتراحات)">
                                 <input type="hidden" id="selectedPatientId" value="">
                             </div>
-                            <div class="mb-3"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
-                            <div class="mb-3">
+                            <div class="mb-2"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
+                            <div class="mb-2">
                                 <label class="form-label"><i class="fas fa-pills"></i> الأدوية الموصوفة</label>
-                                <div id="medicinesList">
-                                    <div class="medicine-row">
-                                        <input type="text" class="form-control" placeholder="اسم الدواء" id="medName0">
-                                        <input type="number" class="form-control" placeholder="العدد" id="medQty0" value="1" min="1" style="width: 100px;">
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-secondary mt-2" onclick="addMedicineRow()"><i class="fas fa-plus"></i> إضافة دواء آخر</button>
+                                <div id="medicinesList"><div class="medicine-row"><input type="text" class="form-control" placeholder="اسم الدواء" id="medName0"><input type="number" class="form-control" placeholder="العدد" id="medQty0" value="1" min="1"></div></div>
+                                <button type="button" class="btn btn-sm btn-secondary mt-1" onclick="addMedicineRow()"><i class="fas fa-plus"></i> إضافة دواء آخر</button>
                             </div>
-                            <div class="row mb-3">
+                            <div class="row g-2 mb-2">
                                 <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
                                 <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background-color:#f0f0f0"></div>
+                                <div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background:#f0f0f0"></div>
                             </div>
-                            <button class="btn btn-primary btn-lg w-100" onclick="addVisitWithAutocomplete()"><i class="fas fa-save"></i> تسجيل الزيارة</button>
+                            <button class="btn btn-primary w-100" onclick="addVisitWithAutocomplete()"><i class="fas fa-save"></i> تسجيل الزيارة</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- تبويب التاريخ الطبي -->
+                <!-- التاريخ الطبي -->
                 <div class="tab-pane fade" id="history">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-search"></i> البحث في التاريخ الطبي</div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
-                                <input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث">
-                                <input type="hidden" id="historySelectedPatientId" value="">
-                            </div>
+                            <div class="mb-2"><label class="form-label"><i class="fas fa-user"></i> اختر المريض (مطلوب)</label><input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث"><input type="hidden" id="historySelectedPatientId" value=""></div>
                             <button class="btn btn-primary" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
-                            <div class="btn-group-custom">
-                                <button class="btn btn-success btn-export" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button>
-                                <button class="btn btn-danger" onclick="exportHistoryToPDF()"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button>
-                            </div>
+                            <div class="btn-group-custom"><button class="btn btn-success btn-export-excel" onclick="exportHistoryToExcel()"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button><button class="btn btn-danger btn-export-pdf" onclick="exportHistoryToPDF()"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button></div>
                             <div id="historyResult" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- تبويب التقارير المالية -->
+                <!-- التقارير المالية -->
                 <div class="tab-pane fade" id="finance">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
                         <div class="card-body">
                             <div class="filter-card">
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label><i class="fas fa-calendar-alt"></i> من تاريخ</label>
-                                        <input type="date" id="startDate" class="form-control">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label><i class="fas fa-calendar-alt"></i> إلى تاريخ</label>
-                                        <input type="date" id="endDate" class="form-control">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label><i class="fas fa-user"></i> اختر مريض (اختياري)</label>
-                                        <input type="text" id="financePatientSearch" class="form-control" placeholder="اكتب اسم المريض للبحث عنه">
-                                        <input type="hidden" id="financeSelectedPatientId" value="">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label>&nbsp;</label>
-                                        <button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button>
-                                    </div>
+                                <div class="row g-2">
+                                    <div class="col-md-3"><label><i class="fas fa-calendar-alt"></i> من تاريخ</label><input type="date" id="startDate" class="form-control"></div>
+                                    <div class="col-md-3"><label><i class="fas fa-calendar-alt"></i> إلى تاريخ</label><input type="date" id="endDate" class="form-control"></div>
+                                    <div class="col-md-4"><label><i class="fas fa-user"></i> اختر مريض (اختياري)</label><input type="text" id="financePatientSearch" class="form-control" placeholder="اكتب اسم المريض"><input type="hidden" id="financeSelectedPatientId" value=""></div>
+                                    <div class="col-md-2"><label>&nbsp;</label><button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button></div>
                                 </div>
                             </div>
-                            <div class="btn-group-custom">
-                                <button class="btn btn-success btn-export" onclick="exportFinanceToExcel()"><i class="fas fa-file-excel"></i> تصدير التقرير إلى Excel</button>
-                                <button class="btn btn-danger" onclick="exportFinanceToPDF()"><i class="fas fa-file-pdf"></i> تصدير التقرير إلى PDF</button>
-                            </div>
+                            <div class="btn-group-custom"><button class="btn btn-success btn-export-excel" onclick="exportFinanceToExcel()"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button><button class="btn btn-danger btn-export-pdf" onclick="exportFinanceToPDF()"><i class="fas fa-file-pdf"></i> تصدير إلى PDF</button></div>
                             <div id="financeResult"></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- تبويب رفع البيانات -->
+                <!-- رفع البيانات -->
                 <div class="tab-pane fade" id="import">
                     <div class="dashboard-card">
                         <div class="card-header"><i class="fas fa-upload"></i> رفع بيانات من Excel</div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="card mb-3">
-                                        <div class="card-header bg-info text-white">رفع ملف المرضى</div>
-                                        <div class="card-body">
-                                            <input type="file" id="patientsExcelFile" class="form-control" accept=".xlsx, .xls">
-                                            <button class="btn btn-primary mt-3" onclick="importPatientsFromExcel()"><i class="fas fa-upload"></i> رفع المرضى</button>
-                                        </div>
-                                    </div>
+                                    <div class="card mb-2"><div class="card-header bg-info text-white">رفع ملف المرضى</div><div class="card-body"><input type="file" id="patientsExcelFile" class="form-control" accept=".xlsx, .xls"><button class="btn btn-primary mt-2 w-100" onclick="importPatientsFromExcel()"><i class="fas fa-upload"></i> رفع المرضى</button></div></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="card mb-3">
-                                        <div class="card-header bg-info text-white">رفع ملف الزيارات</div>
-                                        <div class="card-body">
-                                            <input type="file" id="visitsExcelFile" class="form-control" accept=".xlsx, .xls">
-                                            <button class="btn btn-primary mt-3" onclick="importVisitsFromExcel()"><i class="fas fa-upload"></i> رفع الزيارات</button>
-                                        </div>
-                                    </div>
+                                    <div class="card mb-2"><div class="card-header bg-info text-white">رفع ملف الزيارات</div><div class="card-body"><input type="file" id="visitsExcelFile" class="form-control" accept=".xlsx, .xls"><button class="btn btn-primary mt-2 w-100" onclick="importVisitsFromExcel()"><i class="fas fa-upload"></i> رفع الزيارات</button></div></div>
                                 </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6"><button class="btn btn-success w-100" onclick="downloadPatientsTemplate()"><i class="fas fa-download"></i> تحميل ملف المرضى (Excel)</button></div>
+                                <div class="col-md-6"><button class="btn btn-success w-100" onclick="downloadVisitsTemplate()"><i class="fas fa-download"></i> تحميل ملف الزيارات (Excel)</button></div>
                             </div>
                             <div id="importResult" class="mt-3"></div>
                         </div>
@@ -472,52 +238,41 @@
                 </div>
             </div>
         </div>
-        <footer>
-            <i class="fas fa-code"></i> Powered By Eyad Sulayman | جميع الخدمات محفوظة © 2026
-        </footer>
+        <footer><i class="fas fa-code"></i> Powered By Eyad Sulayman | جميع الخدمات محفوظة © 2026</footer>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="app.js"></script>
-    
     <script>
         function toggleMode() {
             document.body.classList.toggle('dark-mode');
             const btn = document.getElementById('modeToggle');
             btn.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         }
-        
         function calculateRemaining() {
             const total = parseFloat(document.getElementById('totalAmount').value) || 0;
             const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
             document.getElementById('remainingAmount').value = Math.max(0, total - paid);
         }
-        
         let medicineCounter = 1;
         function addMedicineRow() {
             const container = document.getElementById('medicinesList');
             const newRow = document.createElement('div');
             newRow.className = 'medicine-row';
-            newRow.innerHTML = `
-                <input type="text" class="form-control" placeholder="اسم الدواء" id="medName${medicineCounter}">
-                <input type="number" class="form-control" placeholder="العدد" id="medQty${medicineCounter}" value="1" min="1" style="width: 100px;">
-                <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
-            `;
+            newRow.innerHTML = `<input type="text" class="form-control" placeholder="اسم الدواء" id="medName${medicineCounter}"><input type="number" class="form-control" placeholder="العدد" id="medQty${medicineCounter}" value="1" min="1"><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>`;
             container.appendChild(newRow);
             medicineCounter++;
         }
-        
         function getMedicinesString() {
             let medicines = [];
-            for (let i = 0; i < medicineCounter; i++) {
-                const name = document.getElementById(`medName${i}`)?.value;
-                const qty = document.getElementById(`medQty${i}`)?.value;
-                if (name && name.trim()) {
-                    medicines.push(`${name} (${qty || 1})`);
-                }
+            for (let i = 0; i <= medicineCounter; i++) {
+                const nameInput = document.getElementById(`medName${i}`);
+                const qtyInput = document.getElementById(`medQty${i}`);
+                if (nameInput && nameInput.value.trim()) medicines.push(`${nameInput.value.trim()} (${qtyInput ? qtyInput.value : 1})`);
             }
-            return medicines.join(', ');
+            return medicines.join('، ');
         }
+        window.getMedicinesString = getMedicinesString;
+        window.addMedicineRow = addMedicineRow;
     </script>
 </body>
 </html>
