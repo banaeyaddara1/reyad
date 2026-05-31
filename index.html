@@ -290,6 +290,16 @@
             color: var(--nav-active);
             cursor: pointer;
         }
+        
+        .remaining-negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .remaining-positive {
+            color: #28a745;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -341,9 +351,10 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4"><input type="text" id="patientName" class="form-control" placeholder="الاسم الكامل *"></div>
+                                    <div class="col-md-2"><input type="number" id="patientAge" class="form-control" placeholder="العمر"></div>
                                     <div class="col-md-3"><input type="tel" id="patientPhone" class="form-control" placeholder="رقم الجوال"></div>
                                     <div class="col-md-3"><input type="text" id="patientAddress" class="form-control" placeholder="العنوان"></div>
-                                    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="addPatient()"><i class="fas fa-save"></i> حفظ</button></div>
+                                    <div class="col-md-12"><button class="btn btn-primary w-100" onclick="addPatient()"><i class="fas fa-save"></i> حفظ</button></div>
                                 </div>
                             </div>
                         </div>
@@ -370,6 +381,7 @@
                                 </div>
                                 <div class="mb-3"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
                                 <div class="mb-3"><label class="form-label"><i class="fas fa-pills"></i> العلاج / الإجراء</label><textarea id="treatment" class="form-control" rows="2" placeholder="العلاج الموصوف..."></textarea></div>
+                                <div class="mb-3"><label class="form-label"><i class="fas fa-boxes"></i> عدد العلب المستخدمة</label><input type="number" id="boxesCount" class="form-control" placeholder="عدد العلب" value="0" min="0"></div>
                                 <div class="row mb-3">
                                     <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
                                     <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
@@ -473,7 +485,7 @@
         </footer>
     </div>
 
-    <!-- مودال الإعدادات (للأدمن فقط - بدون كلمة مرور) -->
+    <!-- مودال الإعدادات (للأدمن فقط) -->
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content settings-modal">
@@ -517,7 +529,17 @@
             const total = parseFloat(document.getElementById('totalAmount').value) || 0;
             const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
             const remaining = total - paid;
-            document.getElementById('remainingAmount').value = remaining >= 0 ? remaining : 0;
+            document.getElementById('remainingAmount').value = remaining;
+            
+            // تغيير لون الحقل حسب القيمة
+            const remainingField = document.getElementById('remainingAmount');
+            if (remaining < 0) {
+                remainingField.classList.add('remaining-negative');
+                remainingField.classList.remove('remaining-positive');
+            } else {
+                remainingField.classList.add('remaining-positive');
+                remainingField.classList.remove('remaining-negative');
+            }
         }
     </script>
 </body>

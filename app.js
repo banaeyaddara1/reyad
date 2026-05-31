@@ -20,10 +20,9 @@ const auth = getAuth(app);
 console.log("✅ Firebase متصل بنجاح");
 
 // ===================== قائمة البريد الإلكتروني للأدمن =====================
-// هؤلاء هم المستخدمون الذين لديهم صلاحية الأدمن (يُعرفون ببريدهم الإلكتروني فقط)
 const ADMIN_EMAILS = [
-    "admin@clinic.com",     // حساب الأدمن الرئيسي
-    "reyad@clinic.com"      // يمكن إضافة المزيد هنا
+    "admin@clinic.com",
+    "reyad@clinic.com"
 ];
 
 // ===================== متغيرات المصادقة =====================
@@ -47,7 +46,6 @@ onAuthStateChanged(auth, (user) => {
         console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
         console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
         
-        // عرض اسم المستخدم في رسالة الترحيب
         const userNameSpan = document.getElementById('userNameDisplay');
         if (userNameSpan) {
             const displayName = user.email.split('@')[0];
@@ -72,7 +70,6 @@ function applyPermissionsBasedOnRole() {
     
     adminOnlyElements.forEach(el => {
         if (isAdmin) {
-            // إظهار عناصر الأدمن
             if (el.classList.contains('nav-link')) {
                 const parentItem = el.closest('.nav-item');
                 if (parentItem) parentItem.style.display = '';
@@ -80,7 +77,6 @@ function applyPermissionsBasedOnRole() {
                 el.style.display = '';
             }
         } else {
-            // إخفاء عناصر الأدمن للمستخدمين العاديين
             if (el.classList.contains('nav-link')) {
                 const parentItem = el.closest('.nav-item');
                 if (parentItem) parentItem.style.display = 'none';
@@ -219,7 +215,7 @@ window.logoutUser = async function() {
     }
 };
 
-// ===================== إعدادات الأدمن (تظهر فقط للأدمن) =====================
+// ===================== إعدادات الأدمن =====================
 window.openSettings = function() {
     if (!isCurrentUserAdmin()) {
         alert('⚠️ هذه الصفحة متاحة فقط للأدمن');
@@ -319,11 +315,12 @@ function loadPatientsList() {
                 const p = { id: key, ...data[key] };
                 allPatients.push(p);
                 patientNamesList.push({
-                    label: `${p.name} ${p.phone ? `📞 ${p.phone}` : ''}`,
+                    label: `${p.name} ${p.age ? `(${p.age} سنة)` : ''} ${p.phone ? `📞 ${p.phone}` : ''}`,
                     value: p.name,
                     id: p.id,
                     phone: p.phone,
-                    address: p.address
+                    address: p.address,
+                    age: p.age
                 });
             });
         }
@@ -342,7 +339,7 @@ function displayPatientsList(searchTerm = '') {
         );
     }
     
-    let html = '<table class="table table-bordered table-hover"><thead class="table-light"><tr><th>#</th><th>الاسم</th><th>الجوال</th><th>العنوان</th><th>تاريخ التسجيل</th><th>إجراءات</th></tr></thead><tbody>';
+    let html = '<table class="table table-bordered table-hover"><thead class="table-light"><tr><th>#</th><th>الاسم</th><th>العمر</th><th>الجوال</th><th>العنوان</th><th>تاريخ التسجيل</th><th>إجراءات</th></tr></thead><tbody>';
     
     let index = 1;
     if (filteredPatients.length > 0) {
@@ -350,6 +347,7 @@ function displayPatientsList(searchTerm = '') {
             html += `<tr>
                 <td>${index++}</td>
                 <td><strong>${p.name || '-'}</strong></td>
+                <td>${p.age || '-'}</td>
                 <td>${p.phone || '-'}</td>
                 <td>${p.address || '-'}</td>
                 <td>${p.createdAt || '-'}</td>
@@ -357,9 +355,9 @@ function displayPatientsList(searchTerm = '') {
             </tr>`;
         });
     } else {
-        html += '<tr><td colspan="6" class="text-center">لا يوجد مرضى مسجلين</td><tr>';
+        html += '<tr><td colspan="7" class="text-center">لا يوجد مرضى مسجلين</td></tr>';
     }
-    html += '</tbody></tr>';
+    html += '</tbody></table>';
     document.getElementById('patientsList').innerHTML = html;
 }
 
@@ -404,7 +402,7 @@ function updateAutocomplete() {
     }
 }
 
-// ===================== إضافة مريض جديد =====================
+// ===================== إضافة مريض جديد (مع العمر) =====================
 window.addPatient = async function() {
     const name = document.getElementById('patientName').value.trim();
     if (!name) {
@@ -415,6 +413,7 @@ window.addPatient = async function() {
     const newPatientRef = push(ref(db, 'patients'));
     const patientData = {
         name: name,
+        age: document.getElementById('patientAge').value.trim(),
         phone: document.getElementById('patientPhone').value.trim(),
         address: document.getElementById('patientAddress').value.trim(),
         createdAt: new Date().toLocaleDateString('ar-EG')
@@ -423,6 +422,7 @@ window.addPatient = async function() {
     try {
         await set(newPatientRef, patientData);
         document.getElementById('patientName').value = '';
+        document.getElementById('patientAge').value = '';
         document.getElementById('patientPhone').value = '';
         document.getElementById('patientAddress').value = '';
     } catch (error) {
@@ -452,7 +452,7 @@ window.deletePatient = async (id) => {
     }
 };
 
-// ===================== إضافة زيارة =====================
+// ===================== إضافة زيارة (مع عدد العلب والمبلغ المتبقي يسمح بالسالب) =====================
 window.addVisitWithAutocomplete = async function() {
     const patientId = document.getElementById('selectedPatientId').value;
     if (!patientId) {
@@ -465,7 +465,8 @@ window.addVisitWithAutocomplete = async function() {
     
     const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
     const paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-    const remainingAmount = totalAmount - paidAmount;
+    const remainingAmount = totalAmount - paidAmount;  // يسمح بالقيم السالبة (دائن للمريض)
+    const boxesCount = parseFloat(document.getElementById('boxesCount').value) || 0;
     
     const newVisitRef = push(ref(db, 'visits'));
     const visitData = {
@@ -473,9 +474,10 @@ window.addVisitWithAutocomplete = async function() {
         patientName: selectedPatient?.name || 'غير معروف',
         diagnosis: document.getElementById('diagnosis').value.trim(),
         treatment: document.getElementById('treatment').value.trim(),
+        boxesCount: boxesCount,
         totalAmount: totalAmount,
         paidAmount: paidAmount,
-        remainingAmount: remainingAmount >= 0 ? remainingAmount : 0,
+        remainingAmount: remainingAmount,
         date: now.toLocaleDateString('ar-EG'),
         time: now.toLocaleTimeString('ar-EG'),
         timestamp: now.getTime()
@@ -487,6 +489,7 @@ window.addVisitWithAutocomplete = async function() {
         document.getElementById('selectedPatientId').value = '';
         document.getElementById('diagnosis').value = '';
         document.getElementById('treatment').value = '';
+        document.getElementById('boxesCount').value = '0';
         document.getElementById('totalAmount').value = '';
         document.getElementById('paidAmount').value = '';
         document.getElementById('remainingAmount').value = '';
@@ -516,6 +519,7 @@ window.searchMedicalHistoryAutocomplete = async () => {
             const v = visits[key];
             if (patientId === v.patientId) {
                 found = true;
+                const remainingClass = v.remainingAmount < 0 ? 'text-danger' : 'text-success';
                 html += `<div class="accordion-item">
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${key}">
@@ -526,10 +530,11 @@ window.searchMedicalHistoryAutocomplete = async () => {
                         <div class="accordion-body">
                             <p><strong><i class="fas fa-stethoscope"></i> التشخيص:</strong> ${v.diagnosis || '-'}</p>
                             <p><strong><i class="fas fa-pills"></i> العلاج:</strong> ${v.treatment || '-'}</p>
+                            <p><strong><i class="fas fa-boxes"></i> عدد العلب:</strong> ${v.boxesCount || 0}</p>
                             <div class="payment-details">
                                 <p><strong><i class="fas fa-dollar-sign"></i> المبلغ الكامل:</strong> ${v.totalAmount || 0} د.أ</p>
                                 <p><strong><i class="fas fa-money-bill"></i> المبلغ المدفوع:</strong> ${v.paidAmount || 0} د.أ</p>
-                                <p><strong><i class="fas fa-credit-card"></i> المبلغ المتبقي:</strong> ${v.remainingAmount || 0} د.أ</p>
+                                <p><strong><i class="fas fa-credit-card"></i> المبلغ المتبقي:</strong> <span class="${remainingClass}">${v.remainingAmount || 0} د.أ</span></p>
                             </div>
                             <p><strong><i class="fas fa-clock"></i> الوقت:</strong> ${v.time || '-'}</p>
                             <button class="btn btn-sm btn-danger" onclick="window.deleteVisit('${key}')"><i class="fas fa-trash"></i> حذف الزيارة</button>
@@ -559,7 +564,7 @@ window.deleteVisit = async (id) => {
     }
 };
 
-// ===================== التقارير المالية =====================
+// ===================== التقارير المالية (تدعم القيم السالبة) =====================
 window.getFinancialReportAutocomplete = async () => {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -634,6 +639,8 @@ window.getFinancialReportAutocomplete = async () => {
                             <tr>
                                 <th>التاريخ</th>
                                 <th>التشخيص</th>
+                                <th>العلاج</th>
+                                <th>عدد العلب</th>
                                 <th>الكامل (د.أ)</th>
                                 <th>المدفوع (د.أ)</th>
                                 <th>المتبقي (د.أ)</th>
@@ -642,22 +649,25 @@ window.getFinancialReportAutocomplete = async () => {
                         <tbody>`;
             
             for (const v of filteredVisits) {
+                const remainingClass = v.remainingAmount < 0 ? 'text-danger' : 'text-success';
                 html += `<tr>
                     <td>${v.date || '-'}</td>
                     <td>${v.diagnosis || '-'}</td>
+                    <td>${v.treatment || '-'}</td>
+                    <td>${v.boxesCount || 0}</td>
                     <td class="text-primary fw-bold">${v.totalAmount || 0}</td>
                     <td class="text-success fw-bold">${v.paidAmount || 0}</td>
-                    <td class="text-danger fw-bold">${v.remainingAmount || 0}</td>
+                    <td class="${remainingClass} fw-bold">${v.remainingAmount || 0}</td>
                 </tr>`;
             }
             
             html += `</tbody>
                     <tfoot class="table-info">
                         <tr>
-                            <td colspan="2"><strong>الإجمالي</strong></td>
+                            <td colspan="4"><strong>الإجمالي</strong></td>
                             <td><strong>${totalAmountSum} د.أ</strong></td>
                             <td><strong>${paidAmountSum} د.أ</strong></td>
-                            <td><strong>${remainingAmountSum} د.أ</strong></td>
+                            <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
                         </tr>
                     </tfoot>
                 \d+
@@ -666,6 +676,7 @@ window.getFinancialReportAutocomplete = async () => {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
         }
     } else {
+        const remainingClass = remainingAmountSum < 0 ? 'text-danger' : 'text-success';
         html = `
             <div class="animate__animated animate__fadeIn">
                 <div class="total-box">
@@ -673,7 +684,7 @@ window.getFinancialReportAutocomplete = async () => {
                     <div class="row mt-4">
                         <div class="col-md-4"><h3><i class="fas fa-dollar-sign"></i> إجمالي الإيرادات: ${totalAmountSum} د.أ</h3></div>
                         <div class="col-md-4"><h3><i class="fas fa-money-bill"></i> المدفوع: ${paidAmountSum} د.أ</h3></div>
-                        <div class="col-md-4"><h3><i class="fas fa-credit-card"></i> المتبقي: ${remainingAmountSum} د.أ</h3></div>
+                        <div class="col-md-4"><h3><i class="fas fa-credit-card"></i> المتبقي: <span class="${remainingClass}">${remainingAmountSum} د.أ</span></h3></div>
                     </div>
                     <hr>
                     <div class="row mt-3">
@@ -732,10 +743,10 @@ window.downloadTemplate = function(type) {
     let headers = [];
     let filename = "";
     if (type === "patients") {
-        headers = [["الاسم", "الجوال", "العنوان"]];
+        headers = [["الاسم", "العمر", "الجوال", "العنوان"]];
         filename = "قالب_استيراد_المرضى.xlsx";
     } else if (type === "visits") {
-        headers = [["اسم المريض", "التشخيص", "العلاج", "المبلغ الكامل", "المبلغ المدفوع", "التاريخ"]];
+        headers = [["اسم المريض", "التشخيص", "العلاج", "عدد العلب", "المبلغ الكامل", "المبلغ المدفوع", "التاريخ"]];
         filename = "قالب_استيراد_الزيارات.xlsx";
     }
     const ws = XLSX.utils.aoa_to_sheet(headers);
@@ -772,6 +783,7 @@ window.importPatientsExcel = function() {
                 const newPatientRef = push(ref(db, 'patients'));
                 await set(newPatientRef, {
                     name: name,
+                    age: row["العمر"]?.toString().trim() || "",
                     phone: row["الجوال"]?.toString().trim() || "",
                     address: row["العنوان"]?.toString().trim() || "",
                     createdAt: new Date().toLocaleDateString('ar-EG')
@@ -826,7 +838,7 @@ window.importVisitsExcel = async function() {
                     targetId = matchPatient.id;
                 } else {
                     const newPRef = push(ref(db, 'patients'));
-                    await set(newPRef, { name: pName, phone: "", address: "", createdAt: new Date().toLocaleDateString('ar-EG') });
+                    await set(newPRef, { name: pName, age: "", phone: "", address: "", createdAt: new Date().toLocaleDateString('ar-EG') });
                     targetId = newPRef.key;
                     currentPatientsList.push({ id: targetId, name: pName });
                 }
@@ -834,6 +846,7 @@ window.importVisitsExcel = async function() {
                 const total = parseFloat(row["المبلغ الكامل"]) || 0;
                 const paid = parseFloat(row["المبلغ المدفوع"]) || 0;
                 const remaining = total - paid;
+                const boxesCount = parseFloat(row["عدد العلب"]) || 0;
                 
                 const structuredDate = parseExcelDate(row["التاريخ"]);
                 
@@ -843,9 +856,10 @@ window.importVisitsExcel = async function() {
                     patientName: pName,
                     diagnosis: row["التشخيص"]?.toString().trim() || "-",
                     treatment: row["العلاج"]?.toString().trim() || "-",
+                    boxesCount: boxesCount,
                     totalAmount: total,
                     paidAmount: paid,
-                    remainingAmount: remaining >= 0 ? remaining : 0,
+                    remainingAmount: remaining,
                     date: structuredDate,
                     time: now.toLocaleTimeString('ar-EG'),
                     timestamp: now.getTime()
@@ -871,6 +885,7 @@ window.exportPatientsToExcel = function() {
     
     const dataRows = allPatients.map(p => ({
         "الاسم": p.name || "",
+        "العمر": p.age || "",
         "الجوال": p.phone || "",
         "العنوان": p.address || "",
         "تاريخ التسجيل": p.createdAt || ""
@@ -901,6 +916,7 @@ window.exportVisitsToExcel = async function() {
                 "اسم المريض": v.patientName || "",
                 "التشخيص": v.diagnosis || "",
                 "العلاج": v.treatment || "",
+                "عدد العلب": v.boxesCount || 0,
                 "المبلغ الكامل": v.totalAmount || 0,
                 "المبلغ المدفوع": v.paidAmount || 0,
                 "المبلغ المتبقي": v.remainingAmount || 0,
