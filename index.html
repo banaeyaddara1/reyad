@@ -4,17 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صيدلية فراس - نظام إدارة العيادة</title>
+    <!-- Bootstrap CSS - تأكيد التحميل -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jQuery UI -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/smoothness/jquery-ui.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
-        * { font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        /* أساسيات الصفحة */
+        * { 
+            font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
         
+        /* المتغيرات */
         :root {
             --bg-gradient-start: #1a5f7a;
             --bg-gradient-end: #0d3b3b;
@@ -101,7 +109,6 @@
             border-radius: 25px;
             padding: 12px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.25);
-            transition: transform 0.3s, box-shadow 0.3s;
         }
         
         .header-text h1 {
@@ -133,6 +140,7 @@
             left: 20px;
             display: flex;
             gap: 10px;
+            z-index: 10;
         }
         
         .welcome-message {
@@ -144,6 +152,7 @@
             border-radius: 50px;
             font-size: 14px;
             color: white;
+            z-index: 10;
         }
         
         .nav-tabs { 
@@ -182,7 +191,11 @@
         }
         
         .nav-tabs .nav-link:hover, .nav-tabs .nav-link.active { opacity: 1; }
-        .tab-content { padding: 25px; display: none; }
+        
+        .tab-content { 
+            padding: 25px; 
+            display: none; 
+        }
         
         .dashboard-card { 
             border: none; 
@@ -190,7 +203,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.08); 
             margin-bottom: 25px; 
             background: var(--card-bg);
-            transition: transform 0.3s, box-shadow 0.3s;
         }
         
         .card-header { 
@@ -228,16 +240,61 @@
             box-shadow: 0 10px 25px rgba(40,167,69,0.4);
         }
 
-        .btn-danger { border-radius: 10px; transition: all 0.3s; }
-        .btn-danger:hover { transform: scale(1.05); }
+        .btn-danger { 
+            border-radius: 10px; 
+            transition: all 0.3s; 
+        }
         
-        .table-responsive { max-height: 500px; overflow-y: auto; border-radius: 15px; }
-        .table { color: var(--text-color); }
-        .table thead th { background: var(--table-header); color: white; padding: 12px; font-weight: bold; }
-        .table tbody tr:hover { background: var(--border-color); }
+        .btn-danger:hover { 
+            transform: scale(1.05); 
+        }
         
-        .search-box { background: var(--border-color); border-radius: 50px; padding: 5px 20px; }
-        .search-box input { background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 25px; padding: 8px 15px; }
+        /* تحسين عرض الجدول */
+        .table-responsive { 
+            overflow-x: auto;
+            border-radius: 15px;
+        }
+        
+        .table { 
+            color: var(--text-color);
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: collapse;
+        }
+        
+        .table thead th { 
+            background: var(--table-header); 
+            color: white; 
+            padding: 12px 15px; 
+            font-weight: bold;
+            white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .table tbody td {
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        
+        .table tbody tr:hover { 
+            background: var(--border-color); 
+        }
+        
+        .search-box { 
+            background: var(--border-color); 
+            border-radius: 50px; 
+            padding: 5px 20px; 
+            margin-bottom: 20px;
+        }
+        
+        .search-box input { 
+            background: var(--card-bg); 
+            color: var(--text-color); 
+            border: 1px solid var(--border-color); 
+            border-radius: 25px; 
+            padding: 8px 15px; 
+        }
         
         .total-box { 
             background: linear-gradient(135deg, #1a5f7a 0%, #0d3b3b 100%); 
@@ -248,33 +305,91 @@
             margin-top: 20px;
         }
         
-        footer { text-align: center; padding: 20px; color: var(--footer-text); font-size: 14px; }
+        footer { 
+            text-align: center; 
+            padding: 20px; 
+            color: var(--footer-text); 
+            font-size: 14px; 
+        }
         
         .mode-toggle {
-            position: fixed; bottom: 20px; left: 20px; z-index: 1000; background: var(--card-bg);
-            border: none; border-radius: 50%; width: 50px; height: 50px; cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2); transition: all 0.3s; font-size: 1.3rem; color: var(--text-color);
+            position: fixed; 
+            bottom: 20px; 
+            left: 20px; 
+            z-index: 1000; 
+            background: var(--card-bg);
+            border: none; 
+            border-radius: 50%; 
+            width: 50px; 
+            height: 50px; 
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2); 
+            transition: all 0.3s; 
+            font-size: 1.3rem; 
+            color: var(--text-color);
         }
         
-        .payment-details { background: var(--border-color); border-radius: 15px; padding: 15px; margin-top: 10px; }
-        .filter-card { background: var(--border-color); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+        .payment-details { 
+            background: var(--border-color); 
+            border-radius: 15px; 
+            padding: 15px; 
+            margin-top: 10px; 
+        }
+        
+        .filter-card { 
+            background: var(--border-color); 
+            border-radius: 20px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+        }
         
         .ui-autocomplete {
-            background: var(--card-bg); color: var(--text-color); border: 1px solid var(--nav-active);
-            border-radius: 15px; max-height: 250px; overflow-y: auto; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: var(--card-bg); 
+            color: var(--text-color); 
+            border: 1px solid var(--nav-active);
+            border-radius: 15px; 
+            max-height: 250px; 
+            overflow-y: auto; 
+            z-index: 2000; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
-        .ui-autocomplete li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
-        .ui-autocomplete li:hover { background: var(--nav-active); color: white; }
         
-        .stat-card { background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 20px; padding: 20px; text-align: center; color: white; }
-        .custom-progress { background: rgba(255,255,255,0.2); border-radius: 50px; overflow: hidden; height: 30px; }
-        .custom-progress-bar { background: #38ef7d; height: 100%; border-radius: 50px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #000; }
+        .ui-autocomplete li { 
+            padding: 12px 15px; 
+            cursor: pointer; 
+            border-bottom: 1px solid var(--border-color); 
+        }
         
-        .form-control:focus, .form-select:focus { border-color: var(--nav-active); box-shadow: 0 0 0 0.2rem rgba(26,95,122,0.25); }
+        .ui-autocomplete li:hover { 
+            background: var(--nav-active); 
+            color: white; 
+        }
         
-        .settings-modal .modal-content {
-            background: var(--card-bg);
-            color: var(--text-color);
+        .stat-card { 
+            background: linear-gradient(135deg, #11998e, #38ef7d); 
+            border-radius: 20px; 
+            padding: 20px; 
+            text-align: center; 
+            color: white; 
+        }
+        
+        .custom-progress { 
+            background: rgba(255,255,255,0.2); 
+            border-radius: 50px; 
+            overflow: hidden; 
+            height: 30px; 
+        }
+        
+        .custom-progress-bar { 
+            background: #38ef7d; 
+            height: 100%; 
+            border-radius: 50px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 14px; 
+            font-weight: bold; 
+            color: #000; 
         }
         
         .admin-only {
@@ -319,6 +434,25 @@
             width: 100%;
             text-align: center;
             box-shadow: var(--shadow);
+        }
+        
+        /* تحسين عرض البطاقات */
+        .row.g-3 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .col-md-2, .col-md-3, .col-md-4, .col-md-12 {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        @media (min-width: 768px) {
+            .col-md-2 { flex: 0 0 calc(16.666% - 1rem); }
+            .col-md-3 { flex: 0 0 calc(25% - 1rem); }
+            .col-md-4 { flex: 0 0 calc(33.333% - 1rem); }
+            .col-md-12 { flex: 0 0 100%; }
         }
     </style>
 </head>
@@ -375,7 +509,7 @@
                 </div>
             </div>
 
-            <!-- محتوى التطبيق الرئيسي (يظهر فقط بعد تسجيل الدخول) -->
+            <!-- محتوى التطبيق الرئيسي -->
             <div id="appContent" style="display: none;">
                 <ul class="nav nav-tabs" id="mainTab" role="tablist">
                     <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
@@ -387,11 +521,12 @@
                 </ul>
 
                 <div class="tab-content">
+                    <!-- صفحة المرضى -->
                     <div class="tab-pane fade show active" id="patients">
                         <div class="dashboard-card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <span><i class="fas fa-user-plus"></i> إضافة مريض جديد</span>
-                                <button class="btn btn-sm btn-danger admin-only" id="clearPatientsBtn" onclick="window.clearAllPatientsData()"><i class="fas fa-trash-alt"></i> مسح كافة المرضى</button>
+                                <button class="btn btn-sm btn-danger admin-only" onclick="window.clearAllPatientsData()"><i class="fas fa-trash-alt"></i> مسح كافة المرضى</button>
                             </div>
                             <div class="card-body">
                                 <div class="row g-3">
@@ -406,17 +541,21 @@
                         <div class="dashboard-card">
                             <div class="card-header"><i class="fas fa-list"></i> قائمة المرضى</div>
                             <div class="card-body">
-                                <div class="search-box mb-3 d-flex align-items-center gap-2"><i class="fas fa-search"></i> <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()"></div>
+                                <div class="search-box d-flex align-items-center gap-2">
+                                    <i class="fas fa-search"></i> 
+                                    <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()">
+                                </div>
                                 <div id="patientsList" class="table-responsive"></div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- صفحة إدخال زيارة -->
                     <div class="tab-pane fade" id="visits">
                         <div class="dashboard-card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <span><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</span>
-                                <button class="btn btn-sm btn-danger admin-only" id="clearVisitsBtn" onclick="window.clearAllVisitsData()"><i class="fas fa-trash-alt"></i> مسح كافة الزيارات</button>
+                                <button class="btn btn-sm btn-danger admin-only" onclick="window.clearAllVisitsData()"><i class="fas fa-trash-alt"></i> مسح كافة الزيارات</button>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
@@ -437,6 +576,7 @@
                         </div>
                     </div>
 
+                    <!-- صفحة التاريخ الطبي -->
                     <div class="tab-pane fade" id="history">
                         <div class="dashboard-card">
                             <div class="card-header"><i class="fas fa-search"></i> البحث في التاريخ الطبي</div>
@@ -452,6 +592,7 @@
                         </div>
                     </div>
 
+                    <!-- صفحة التقارير المالية -->
                     <div class="tab-pane fade" id="finance">
                         <div class="dashboard-card">
                             <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
@@ -482,6 +623,7 @@
                         </div>
                     </div>
 
+                    <!-- صفحة استيراد Excel -->
                     <div class="tab-pane fade" id="excelImportTab">
                         <div class="row">
                             <div class="col-md-6">
@@ -509,6 +651,7 @@
                         </div>
                     </div>
 
+                    <!-- صفحة تصدير Excel -->
                     <div class="tab-pane fade" id="excelExportTab">
                         <div class="dashboard-card">
                             <div class="card-header"><i class="fas fa-file-download"></i> تحميل وتنزيل بيانات النظام الحالية لـ Excel</div>
@@ -521,7 +664,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -530,7 +672,7 @@
         </footer>
     </div>
 
-    <!-- مودال الإعدادات (للأدمن فقط) -->
+    <!-- مودال الإعدادات -->
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content settings-modal">
@@ -556,7 +698,11 @@
         </div>
     </div>
 
+    <!-- مكتبات JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script type="module" src="app.js"></script>
     
     <script>

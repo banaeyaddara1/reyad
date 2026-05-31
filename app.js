@@ -46,10 +46,19 @@ onAuthStateChanged(auth, (user) => {
         console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
         
         // إظهار عناصر المستخدم المسجل
-        document.getElementById('loginContainer').style.display = 'none';
-        document.getElementById('appContent').style.display = 'block';
-        document.getElementById('topButtons').style.display = 'flex';
-        document.getElementById('welcomeMessage').style.display = 'block';
+        const loginContainer = document.getElementById('loginContainer');
+        const appContent = document.getElementById('appContent');
+        const topButtons = document.getElementById('topButtons');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const tabs = document.querySelector('.nav-tabs');
+        const tabContent = document.querySelector('.tab-content');
+        
+        if (loginContainer) loginContainer.style.display = 'none';
+        if (appContent) appContent.style.display = 'block';
+        if (topButtons) topButtons.style.display = 'flex';
+        if (welcomeMessage) welcomeMessage.style.display = 'block';
+        if (tabs) tabs.style.display = 'flex';
+        if (tabContent) tabContent.style.display = 'block';
         
         // عرض اسم المستخدم
         const userNameSpan = document.getElementById('userNameDisplay');
@@ -57,12 +66,6 @@ onAuthStateChanged(auth, (user) => {
             const displayName = user.email.split('@')[0];
             userNameSpan.textContent = `مرحباً ${displayName}`;
         }
-        
-        // إظهار التبويبات
-        const tabs = document.querySelector('.nav-tabs');
-        const tabContent = document.querySelector('.tab-content');
-        if (tabs) tabs.style.display = 'flex';
-        if (tabContent) tabContent.style.display = 'block';
         
         // تطبيق صلاحيات الأدمن
         applyPermissionsBasedOnRole();
@@ -74,13 +77,17 @@ onAuthStateChanged(auth, (user) => {
         console.log("❌ لا يوجد مستخدم مسجل الدخول");
         
         // إظهار شاشة تسجيل الدخول
-        document.getElementById('loginContainer').style.display = 'flex';
-        document.getElementById('appContent').style.display = 'none';
-        document.getElementById('topButtons').style.display = 'none';
-        document.getElementById('welcomeMessage').style.display = 'none';
-        
+        const loginContainer = document.getElementById('loginContainer');
+        const appContent = document.getElementById('appContent');
+        const topButtons = document.getElementById('topButtons');
+        const welcomeMessage = document.getElementById('welcomeMessage');
         const tabs = document.querySelector('.nav-tabs');
         const tabContent = document.querySelector('.tab-content');
+        
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (appContent) appContent.style.display = 'none';
+        if (topButtons) topButtons.style.display = 'none';
+        if (welcomeMessage) welcomeMessage.style.display = 'none';
         if (tabs) tabs.style.display = 'none';
         if (tabContent) tabContent.style.display = 'none';
     }
@@ -108,7 +115,7 @@ function applyPermissionsBasedOnRole() {
     });
 }
 
-// ===================== حفظ البريد الإلكتروني في localStorage =====================
+// ===================== حفظ البريد الإلكتروني =====================
 function saveEmailToLocalStorage(email) {
     if (email) {
         localStorage.setItem('savedEmail', email);
@@ -235,33 +242,21 @@ window.createNewUserByAdmin = async function() {
     }
 };
 
-// ===================== دالة التحويل الذكية للتواريخ =====================
+// ===================== دالة تحويل التاريخ =====================
 function parseExcelDate(excelDateValue) {
     if (!excelDateValue) return new Date().toLocaleDateString('ar-EG');
-    
     let dateStr = String(excelDateValue).trim();
-    
-    if (dateStr.includes('-')) {
-        return dateStr.replace(/-/g, '/');
-    }
-    
-    if (dateStr.includes('/')) {
-        return dateStr;
-    }
-    
+    if (dateStr.includes('-')) return dateStr.replace(/-/g, '/');
+    if (dateStr.includes('/')) return dateStr;
     const num = parseFloat(excelDateValue);
     if (!isNaN(num)) {
         const dateObj = new Date(Math.round((num - 25569) * 86400 * 1000));
-        const day = dateObj.getDate();
-        const month = dateObj.getMonth() + 1;
-        const year = dateObj.getFullYear();
-        return `${day}/${month}/${year}`;
+        return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
     }
-    
     return dateStr;
 }
 
-// ===================== تحديث قائمة المرضى من Firebase =====================
+// ===================== تحديث قائمة المرضى =====================
 function loadPatientsList() {
     const patientsRef = ref(db, 'patients');
     onValue(patientsRef, (snapshot) => {
@@ -289,7 +284,7 @@ function loadPatientsList() {
     });
 }
 
-// ===================== عرض قائمة المرضى =====================
+// ===================== عرض قائمة المرضى (بشكل صحيح) =====================
 function displayPatientsList(searchTerm = '') {
     let filteredPatients = allPatients;
     if (searchTerm) {
@@ -298,25 +293,45 @@ function displayPatientsList(searchTerm = '') {
         );
     }
     
-    let html = '<table class="table table-bordered table-hover"><thead class="table-light"><tr><th>#</th><th>الاسم</th><th>العمر</th><th>الجوال</th><th>العنوان</th><th>تاريخ التسجيل</th><th>إجراءات</th></table></thead><tbody>';
+    // إنشاء الجدول بشكل صحيح مع أعمدة منفصلة
+    let html = `
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">#</th>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">الاسم</th>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">العمر</th>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">الجوال</th>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">العنوان</th>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">تاريخ التسجيل</th>
+                    <th style="background: var(--table-header); color: white; padding: 12px;">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
     
     let index = 1;
     if (filteredPatients.length > 0) {
         filteredPatients.forEach(p => {
-            html += `<tr>
-                <td>${index++}</td>
-                <td><strong>${p.name || '-'}</strong></td>
-                <td>${p.age || '-'}</td>
-                <td>${p.phone || '-'}</td>
-                <td>${p.address || '-'}</td>
-                <td>${p.createdAt || '-'}</td>
-                <td><button class="btn btn-sm btn-danger" onclick="window.deletePatient('${p.id}')"><i class="fas fa-trash"></i></button></td>
-            </tr>`;
+            html += `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">${index++}</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);"><strong>${p.name || '-'}</strong></td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.age || '-'}</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.phone || '-'}</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.address || '-'}</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.createdAt || '-'}</td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">
+                        <button class="btn btn-sm btn-danger" onclick="window.deletePatient('${p.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
         });
     } else {
-        html += '<tr><td colspan="7" class="text-center">لا يوجد مرضى مسجلين</td></tr>';
+        html += `<tr><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
     }
-    html += '</tbody></table>';
+    
+    html += `</tbody></table>`;
     document.getElementById('patientsList').innerHTML = html;
 }
 
@@ -384,12 +399,14 @@ window.addPatient = async function() {
         document.getElementById('patientAge').value = '';
         document.getElementById('patientPhone').value = '';
         document.getElementById('patientAddress').value = '';
+        alert('✅ تم إضافة المريض بنجاح');
     } catch (error) {
         console.error(error);
+        alert('❌ حدث خطأ أثناء الإضافة');
     }
 };
 
-// ===================== حذف مريض مفرد =====================
+// ===================== حذف مريض =====================
 window.deletePatient = async (id) => {
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المريض؟ سيتم حذف جميع زياراته أيضاً!')) {
         try {
@@ -407,6 +424,7 @@ window.deletePatient = async (id) => {
             alert('🗑️ تم حذف المريض وجميع زياراته');
         } catch (error) {
             console.error(error);
+            alert('❌ حدث خطأ أثناء الحذف');
         }
     }
 };
@@ -455,6 +473,7 @@ window.addVisitWithAutocomplete = async function() {
         alert('✅ تم تسجيل الزيارة بنجاح!');
     } catch (error) {
         console.error(error);
+        alert('❌ حدث خطأ أثناء تسجيل الزيارة');
     }
 };
 
@@ -593,19 +612,12 @@ window.getFinancialReportAutocomplete = async () => {
                         <i class="fas fa-user-md fs-3"></i>
                         <h4>كشف حساب المريض: ${targetName}</h4>
                     </div>
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>التاريخ</th>
-                                <th>التشخيص</th>
-                                <th>العلاج</th>
-                                <th>عدد العلب</th>
-                                <th>الكامل (د.أ)</th>
-                                <th>المدفوع (د.أ)</th>
-                                <th>المتبقي (د.أ)</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr><th>التاريخ</th><th>التشخيص</th><th>العلاج</th><th>عدد العلب</th><th>الكامل (د.أ)</th><th>المدفوع (د.أ)</th><th>المتبقي (د.أ)</th></tr>
+                            </thead>
+                            <tbody>`;
             
             for (const v of filteredVisits) {
                 const remainingClass = v.remainingAmount < 0 ? 'text-danger' : 'text-success';
@@ -622,13 +634,13 @@ window.getFinancialReportAutocomplete = async () => {
             
             html += `</tbody>
                     <tfoot class="table-info">
-                        <tr>
-                            <td colspan="4"><strong>الإجمالي</strong></td>
-                            <td><strong>${totalAmountSum} د.أ</strong></td>
-                            <td><strong>${paidAmountSum} د.أ</strong></td>
-                            <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
-                        </tr>
-                    </tfoot>
+                        <tr><td colspan="4"><strong>الإجمالي</strong></td>
+                        <td><strong>${totalAmountSum} د.أ</strong></td>
+                        <td><strong>${paidAmountSum} د.أ</strong></td>
+                        <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
+                    </tr></tfoot>
+                </table>
+                    </div>
                 </div>`;
         } else {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
@@ -892,7 +904,7 @@ window.exportVisitsToExcel = async function() {
     }
 };
 
-// استعادة البريد الإلكتروني المحفوظ عند تحميل الصفحة
+// استعادة البريد الإلكتروني المحفوظ
 window.addEventListener('DOMContentLoaded', () => {
     const savedEmail = getSavedEmail();
     if (savedEmail) {
