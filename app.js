@@ -1,6 +1,6 @@
 // ===================== إعداد Firebase =====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+import { getDatabase, ref, set, update, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -33,11 +33,18 @@ let patientNamesList = [];
 
 // ===================== دالة التحقق من صلاحية الأدمن =====================
 function isCurrentUserAdmin() {
-    return currentUser && ADMIN_EMAILS.includes(currentUser.email);
+    return currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim());
 }
 
 // ===================== مراقبة حالة تسجيل الدخول =====================
 onAuthStateChanged(auth, (user) => {
+    const loginContainer = document.getElementById('loginContainer');
+    const appContent = document.getElementById('appContent');
+    const topButtons = document.getElementById('topButtons');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const tabs = document.querySelector('.nav-tabs');
+    const tabContent = document.querySelector('.tab-content');
+
     if (user) {
         currentUser = user;
         const isAdmin = isCurrentUserAdmin();
@@ -45,20 +52,13 @@ onAuthStateChanged(auth, (user) => {
         console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
         console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
         
-        // إظهار عناصر المستخدم المسجل
-        const loginContainer = document.getElementById('loginContainer');
-        const appContent = document.getElementById('appContent');
-        const topButtons = document.getElementById('topButtons');
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const tabs = document.querySelector('.nav-tabs');
-        const tabContent = document.querySelector('.tab-content');
-        
-        if (loginContainer) loginContainer.style.display = 'none';
-        if (appContent) appContent.style.display = 'block';
-        if (topButtons) topButtons.style.display = 'flex';
-        if (welcomeMessage) welcomeMessage.style.display = 'block';
-        if (tabs) tabs.style.display = 'flex';
-        if (tabContent) tabContent.style.display = 'block';
+        // إظهار عناصر المستخدم المسجل وإخفاء شاشة تسجيل الدخول تماماً وبقوة
+        if (loginContainer) loginContainer.style.setProperty('display', 'none', 'important');
+        if (appContent) appContent.style.setProperty('display', 'block', 'important');
+        if (topButtons) topButtons.style.setProperty('display', 'flex', 'important');
+        if (welcomeMessage) welcomeMessage.style.setProperty('display', 'block', 'important');
+        if (tabs) tabs.style.setProperty('display', 'flex', 'important');
+        if (tabContent) tabContent.style.setProperty('display', 'block', 'important');
         
         // عرض اسم المستخدم
         const userNameSpan = document.getElementById('userNameDisplay');
@@ -74,22 +74,15 @@ onAuthStateChanged(auth, (user) => {
         loadPatientsList();
     } else {
         currentUser = null;
-        console.log("❌ لا يوجد مستخدم مسجل الدخول");
+        console.log("❌ لا يوجد مستخدم مسجل الدخول - حظر الواجهة");
         
-        // إظهار شاشة تسجيل الدخول
-        const loginContainer = document.getElementById('loginContainer');
-        const appContent = document.getElementById('appContent');
-        const topButtons = document.getElementById('topButtons');
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const tabs = document.querySelector('.nav-tabs');
-        const tabContent = document.querySelector('.tab-content');
-        
-        if (loginContainer) loginContainer.style.display = 'flex';
-        if (appContent) appContent.style.display = 'none';
-        if (topButtons) topButtons.style.display = 'none';
-        if (welcomeMessage) welcomeMessage.style.display = 'none';
-        if (tabs) tabs.style.display = 'none';
-        if (tabContent) tabContent.style.display = 'none';
+        // حظر كامل للواجهة وإظهار شاشة الدخول فقط لا غير
+        if (loginContainer) loginContainer.style.setProperty('display', 'flex', 'important');
+        if (appContent) appContent.style.setProperty('display', 'none', 'important');
+        if (topButtons) topButtons.style.setProperty('display', 'none', 'important');
+        if (welcomeMessage) welcomeMessage.style.setProperty('display', 'none', 'important');
+        if (tabs) tabs.style.setProperty('display', 'none', 'important');
+        if (tabContent) tabContent.style.setProperty('display', 'none', 'important');
     }
 });
 
@@ -100,16 +93,16 @@ function applyPermissionsBasedOnRole() {
     
     adminOnlyElements.forEach(el => {
         if (isAdmin) {
-            el.style.display = '';
+            el.style.setProperty('display', '', 'important');
             if (el.classList.contains('nav-link')) {
                 const parentItem = el.closest('.nav-item');
-                if (parentItem) parentItem.style.display = '';
+                if (parentItem) parentItem.style.setProperty('display', '', 'important');
             }
         } else {
-            el.style.display = 'none';
+            el.style.setProperty('display', 'none', 'important');
             if (el.classList.contains('nav-link')) {
                 const parentItem = el.closest('.nav-item');
-                if (parentItem) parentItem.style.display = 'none';
+                if (parentItem) parentItem.style.setProperty('display', 'none', 'important');
             }
         }
     });
@@ -155,12 +148,9 @@ window.loginWithEmail = async function() {
         messageDiv.textContent = '⏳ جاري تسجيل الدخول...';
         await signInWithEmailAndPassword(auth, email, password);
         messageDiv.textContent = '✅ تم تسجيل الدخول بنجاح!';
-        setTimeout(() => {
-            location.reload();
-        }, 1000);
     } catch (error) {
         console.error(error);
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
             messageDiv.textContent = '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
         } else if (error.code === 'auth/invalid-email') {
             messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
@@ -174,7 +164,6 @@ window.logoutUser = async function() {
     try {
         await signOut(auth);
         alert('👋 تم تسجيل الخروج بنجاح');
-        location.reload();
     } catch (error) {
         console.error(error);
         alert('❌ حدث خطأ أثناء تسجيل الخروج');
@@ -284,7 +273,7 @@ function loadPatientsList() {
     });
 }
 
-// ===================== عرض قائمة المرضى (بشكل صحيح) =====================
+// ===================== عرض قائمة المرضى =====================
 function displayPatientsList(searchTerm = '') {
     let filteredPatients = allPatients;
     if (searchTerm) {
@@ -293,7 +282,6 @@ function displayPatientsList(searchTerm = '') {
         );
     }
     
-    // إنشاء الجدول بشكل صحيح مع أعمدة منفصلة
     let html = `
         <table class="table table-bordered table-hover">
             <thead>
@@ -322,6 +310,7 @@ function displayPatientsList(searchTerm = '') {
                     <td style="padding: 10px; border: 1px solid var(--border-color);">${p.address || '-'}</td>
                     <td style="padding: 10px; border: 1px solid var(--border-color);">${p.createdAt || '-'}</td>
                     <td style="padding: 10px; border: 1px solid var(--border-color);">
+                        <button class="btn btn-sm btn-warning me-1" onclick="window.openEditPatientModal('${p.id}', '${p.name}', '${p.age || ''}', '${p.phone || ''}', '${p.address || ''}')"><i class="fas fa-edit"></i> تعديل</button>
                         <button class="btn btn-sm btn-danger" onclick="window.deletePatient('${p.id}')"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
@@ -337,6 +326,51 @@ function displayPatientsList(searchTerm = '') {
 
 window.filterPatients = function() {
     displayPatientsList(document.getElementById('searchPatient').value);
+};
+
+// ===================== دوال تعديل بيانات المريض =====================
+window.openEditPatientModal = function(id, name, age, phone, address) {
+    document.getElementById('editPatientId').value = id;
+    document.getElementById('editPatientName').value = name;
+    document.getElementById('editPatientAge').value = age;
+    document.getElementById('editPatientPhone').value = phone;
+    document.getElementById('editPatientAddress').value = address;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editPatientModal'));
+    modal.show();
+};
+
+window.savePatientEdit = async function() {
+    const id = document.getElementById('editPatientId').value;
+    const name = document.getElementById('editPatientName').value.trim();
+    const age = document.getElementById('editPatientAge').value.trim();
+    const phone = document.getElementById('editPatientPhone').value.trim();
+    const address = document.getElementById('editPatientAddress').value.trim();
+    
+    if (!name) {
+        alert('⚠️ الاسم الكامل مطلوب');
+        return;
+    }
+    
+    try {
+        const patientRef = ref(db, `patients/${id}`);
+        await update(patientRef, {
+            name: name,
+            age: age,
+            phone: phone,
+            address: address
+        });
+        
+        // إغلاق المودال برمجياً بشكل سليم تنفيذاً لتعليمات Bootstrap 5
+        const modalEl = document.getElementById('editPatientModal');
+        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+        
+        alert('✅ تم تحديث بيانات المريض بنجاح!');
+    } catch (error) {
+        console.error(error);
+        alert('❌ حدث خطأ أثناء تحديث البيانات');
+    }
 };
 
 // ===================== تحديث الـ Autocomplete =====================
@@ -380,7 +414,7 @@ function updateAutocomplete() {
 window.addPatient = async function() {
     const name = document.getElementById('patientName').value.trim();
     if (!name) {
-        alert('⚠️ الرجاء إدخال اسم المريض');
+        alert('⚠️ الرجاء إدخل اسم المريض');
         return;
     }
     
@@ -605,12 +639,25 @@ window.getFinancialReportAutocomplete = async () => {
     
     if (patientId || patientName) {
         if (filteredVisits.length > 0) {
-            const targetName = filteredVisits[0].patientName;
+            // جلب البيانات التعريفية الكاملة للمريض من القائمة المحلية المحدثة
+            const targetId = patientId || filteredVisits[0].patientId;
+            const patientObj = allPatients.find(p => p.id === targetId) || {
+                name: filteredVisits[0].patientName,
+                age: '-',
+                phone: '-',
+                address: '-'
+            };
+
             html = `
                 <div class="animate__animated animate__fadeIn">
-                    <div class="stat-card mb-4">
-                        <i class="fas fa-user-md fs-3"></i>
-                        <h4>كشف حساب المريض: ${targetName}</h4>
+                    <div class="stat-card mb-4 text-start p-4" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+                        <h4 class="text-center mb-3"><i class="fas fa-file-invoice-dollar"></i> كشف حساب المريض التفصيلي</h4>
+                        <div class="row text-white g-2 fs-6">
+                            <div class="col-md-6"><strong><i class="fas fa-user"></i> الاسم:</strong> ${patientObj.name}</div>
+                            <div class="col-md-6"><strong><i class="fas fa-birthday-cake"></i> العمر:</strong> ${patientObj.age || '-'} سنة</div>
+                            <div class="col-md-6"><strong><i class="fas fa-phone"></i> رقم الجوال:</strong> ${patientObj.phone || '-'}</div>
+                            <div class="col-md-6"><strong><i class="fas fa-map-marker-alt"></i> العنوان:</strong> ${patientObj.address || '-'}</div>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
