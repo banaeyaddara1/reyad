@@ -129,6 +129,12 @@
             display: inline-block;
         }
         
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            left: 80px;
+        }
+        
         .nav-tabs { 
             border-bottom: 2px solid var(--border-color); 
             padding: 0 20px; 
@@ -268,6 +274,11 @@
     <div class="container">
         <div class="main-card animate__animated animate__fadeInUp">
             <div class="custom-header">
+                <div class="logout-btn">
+                    <button onclick="window.logoutUser()" class="btn btn-sm btn-danger" style="border-radius: 20px;">
+                        <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+                    </button>
+                </div>
                 <div class="logo-container">
                     <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
                     <div class="header-text">
@@ -278,149 +289,151 @@
                 </div>
             </div>
 
-            <ul class="nav nav-tabs" id="mainTab" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelImportTab"><i class="fas fa-file-upload"></i> استيراد البيانات (Excel)</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-file-download"></i> تصدير البيانات</button></li>
-            </ul>
+            <div id="appContent" style="display: none;">
+                <ul class="nav nav-tabs" id="mainTab" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelImportTab"><i class="fas fa-file-upload"></i> استيراد البيانات (Excel)</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-file-download"></i> تصدير البيانات</button></li>
+                </ul>
 
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="patients">
-                    <div class="dashboard-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-user-plus"></i> إضافة مريض جديد</span>
-                            <button class="btn btn-sm btn-danger" onclick="window.clearAllPatientsData()"><i class="fas fa-trash-alt"></i> مسح كافة المرضى</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4"><input type="text" id="patientName" class="form-control" placeholder="الاسم الكامل *"></div>
-                                <div class="col-md-3"><input type="tel" id="patientPhone" class="form-control" placeholder="رقم الجوال"></div>
-                                <div class="col-md-3"><input type="text" id="patientAddress" class="form-control" placeholder="العنوان"></div>
-                                <div class="col-md-2"><button class="btn btn-primary w-100" onclick="addPatient()"><i class="fas fa-save"></i> حفظ</button></div>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="patients">
+                        <div class="dashboard-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-user-plus"></i> إضافة مريض جديد</span>
+                                <button class="btn btn-sm btn-danger" onclick="window.clearAllPatientsData()"><i class="fas fa-trash-alt"></i> مسح كافة المرضى</button>
                             </div>
-                        </div>
-                    </div>
-                    <div class="dashboard-card">
-                        <div class="card-header"><i class="fas fa-list"></i> قائمة المرضى</div>
-                        <div class="card-body">
-                            <div class="search-box mb-3 d-flex align-items-center gap-2"><i class="fas fa-search"></i> <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()"></div>
-                            <div id="patientsList" class="table-responsive"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="visits">
-                    <div class="dashboard-card">
-                        <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
-                                <input type="text" id="patientSearchInput" class="form-control" placeholder="اكتب اسم المريض (سيظهر اقتراحات)">
-                                <input type="hidden" id="selectedPatientId" value="">
-                            </div>
-                            <div class="mb-3"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
-                            <div class="mb-3"><label class="form-label"><i class="fas fa-pills"></i> العلاج / الإجراء</label><textarea id="treatment" class="form-control" rows="2" placeholder="العلاج الموصوف..."></textarea></div>
-                            <div class="row mb-3">
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
-                                <div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background-color:#f0f0f0"></div>
-                            </div>
-                            <button class="btn btn-primary btn-lg w-100" onclick="addVisitWithAutocomplete()"><i class="fas fa-save"></i> تسجيل الزيارة</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="history">
-                    <div class="dashboard-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-search"></i> البحث في التاريخ الطبي</span>
-                            <button class="btn btn-sm btn-danger" onclick="window.clearAllVisitsData()"><i class="fas fa-trash-alt"></i> مسح كافة الزيارات</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
-                                <input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث">
-                                <input type="hidden" id="historySelectedPatientId" value="">
-                            </div>
-                            <button class="btn btn-primary w-100" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
-                            <div id="historyResult" class="mt-3"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="finance">
-                    <div class="dashboard-card">
-                        <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
-                        <div class="card-body">
-                            <div class="filter-card">
+                            <div class="card-body">
                                 <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label><i class="fas fa-calendar-alt"></i> من تاريخ</label>
-                                        <input type="date" id="startDate" class="form-control">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label><i class="fas fa-calendar-alt"></i> إلى تاريخ</label>
-                                        <input type="date" id="endDate" class="form-control">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label><i class="fas fa-user"></i> اختر مريض (اختياري)</label>
-                                        <input type="text" id="financePatientSearch" class="form-control" placeholder="اكتب اسم المريض للبحث عنه">
-                                        <input type="hidden" id="financeSelectedPatientId" value="">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label>&nbsp;</label>
-                                        <button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="financeResult"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="excelImportTab">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="dashboard-card">
-                                <div class="card-header"><i class="fas fa-users"></i> استيراد ملف المرضى</div>
-                                <div class="card-body text-center">
-                                    <p class="text-muted small">قم بتحميل القالب الخاص بالمرضى، املأ البيانات ثم قم برفع الملف هنا.</p>
-                                    <button class="btn btn-sm btn-secondary mb-3" onclick="window.downloadTemplate('patients')"><i class="fas fa-download"></i> تحميل قالب ملف المرضى فارغ</button>
-                                    <input type="file" id="excelPatientsFile" class="form-control mb-3" accept=".xlsx, .xls">
-                                    <button class="btn btn-success w-100" onclick="window.importPatientsExcel()"><i class="fas fa-upload"></i> رفع واستيراد المرضى</button>
+                                    <div class="col-md-4"><input type="text" id="patientName" class="form-control" placeholder="الاسم الكامل *"></div>
+                                    <div class="col-md-3"><input type="tel" id="patientPhone" class="form-control" placeholder="رقم الجوال"></div>
+                                    <div class="col-md-3"><input type="text" id="patientAddress" class="form-control" placeholder="العنوان"></div>
+                                    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="addPatient()"><i class="fas fa-save"></i> حفظ</button></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="dashboard-card">
-                                <div class="card-header"><i class="fas fa-history"></i> استيراد ملف التاريخ الطبي (الزيارات)</div>
-                                <div class="card-body text-center">
-                                    <p class="text-muted small">تنبيه: يجب أن تتطابق أسماء المرضى في ملف الزيارات مع الأسماء المسجلة بالبرنامج لربط البيانات بشكل صحيح.</p>
-                                    <button class="btn btn-sm btn-secondary mb-3" onclick="window.downloadTemplate('visits')"><i class="fas fa-download"></i> تحميل قالب ملف الزيارات فارغ</button>
-                                    <input type="file" id="excelVisitsFile" class="form-control mb-3" accept=".xlsx, .xls">
-                                    <button class="btn btn-success w-100" onclick="window.importVisitsExcel()"><i class="fas fa-upload"></i> رفع واستيراد التاريخ الطبي</button>
+                        <div class="dashboard-card">
+                            <div class="card-header"><i class="fas fa-list"></i> قائمة المرضى</div>
+                            <div class="card-body">
+                                <div class="search-box mb-3 d-flex align-items-center gap-2"><i class="fas fa-search"></i> <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()"></div>
+                                <div id="patientsList" class="table-responsive"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="visits">
+                        <div class="dashboard-card">
+                            <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
+                                    <input type="text" id="patientSearchInput" class="form-control" placeholder="اكتب اسم المريض (سيظهر اقتراحات)">
+                                    <input type="hidden" id="selectedPatientId" value="">
+                                </div>
+                                <div class="mb-3"><label class="form-label"><i class="fas fa-stethoscope"></i> التشخيص</label><textarea id="diagnosis" class="form-control" rows="2" placeholder="التشخيص الطبي..."></textarea></div>
+                                <div class="mb-3"><label class="form-label"><i class="fas fa-pills"></i> العلاج / الإجراء</label><textarea id="treatment" class="form-control" rows="2" placeholder="العلاج الموصوف..."></textarea></div>
+                                <div class="row mb-3">
+                                    <div class="col-md-4"><label class="form-label"><i class="fas fa-dollar-sign"></i> المبلغ الكامل (د.أ)</label><input type="number" id="totalAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
+                                    <div class="col-md-4"><label class="form-label"><i class="fas fa-money-bill"></i> المبلغ المدفوع (د.أ)</label><input type="number" id="paidAmount" class="form-control" placeholder="0" oninput="calculateRemaining()"></div>
+                                    <div class="col-md-4"><label class="form-label"><i class="fas fa-credit-card"></i> المبلغ المتبقي (د.أ)</label><input type="number" id="remainingAmount" class="form-control" placeholder="0" readonly style="background-color:#f0f0f0"></div>
+                                </div>
+                                <button class="btn btn-primary btn-lg w-100" onclick="addVisitWithAutocomplete()"><i class="fas fa-save"></i> تسجيل الزيارة</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="history">
+                        <div class="dashboard-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-search"></i> البحث في التاريخ الطبي</span>
+                                <button class="btn btn-sm btn-danger" onclick="window.clearAllVisitsData()"><i class="fas fa-trash-alt"></i> مسح كافة الزيارات</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
+                                    <input type="text" id="historySearchInput" class="form-control" placeholder="اكتب اسم المريض للبحث">
+                                    <input type="hidden" id="historySelectedPatientId" value="">
+                                </div>
+                                <button class="btn btn-primary w-100" onclick="searchMedicalHistoryAutocomplete()"><i class="fas fa-search"></i> بحث</button>
+                                <div id="historyResult" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="finance">
+                        <div class="dashboard-card">
+                            <div class="card-header"><i class="fas fa-chart-simple"></i> التقارير المالية</div>
+                            <div class="card-body">
+                                <div class="filter-card">
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label><i class="fas fa-calendar-alt"></i> من تاريخ</label>
+                                            <input type="date" id="startDate" class="form-control">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label><i class="fas fa-calendar-alt"></i> إلى تاريخ</label>
+                                            <input type="date" id="endDate" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label><i class="fas fa-user"></i> اختر مريض (اختياري)</label>
+                                            <input type="text" id="financePatientSearch" class="form-control" placeholder="اكتب اسم المريض للبحث عنه">
+                                            <input type="hidden" id="financeSelectedPatientId" value="">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label>&nbsp;</label>
+                                            <button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="financeResult"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="excelImportTab">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="dashboard-card">
+                                    <div class="card-header"><i class="fas fa-users"></i> استيراد ملف المرضى</div>
+                                    <div class="card-body text-center">
+                                        <p class="text-muted small">قم بتحميل القالب الخاص بالمرضى، املأ البيانات ثم قم برفع الملف هنا.</p>
+                                        <button class="btn btn-sm btn-secondary mb-3" onclick="window.downloadTemplate('patients')"><i class="fas fa-download"></i> تحميل قالب ملف المرضى فارغ</button>
+                                        <input type="file" id="excelPatientsFile" class="form-control mb-3" accept=".xlsx, .xls">
+                                        <button class="btn btn-success w-100" onclick="window.importPatientsExcel()"><i class="fas fa-upload"></i> رفع واستيراد المرضى</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="dashboard-card">
+                                    <div class="card-header"><i class="fas fa-history"></i> استيراد ملف التاريخ الطبي (الزيارات)</div>
+                                    <div class="card-body text-center">
+                                        <p class="text-muted small">تنبيه: يجب أن تتطابق أسماء المرضى في ملف الزيارات مع الأسماء المسجلة بالبرنامج لربط البيانات بشكل صحيح.</p>
+                                        <button class="btn btn-sm btn-secondary mb-3" onclick="window.downloadTemplate('visits')"><i class="fas fa-download"></i> تحميل قالب ملف الزيارات فارغ</button>
+                                        <input type="file" id="excelVisitsFile" class="form-control mb-3" accept=".xlsx, .xls">
+                                        <button class="btn btn-success w-100" onclick="window.importVisitsExcel()"><i class="fas fa-upload"></i> رفع واستيراد التاريخ الطبي</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="tab-pane fade" id="excelExportTab">
-                    <div class="dashboard-card">
-                        <div class="card-header"><i class="fas fa-file-download"></i> تحميل وتنزيل بيانات النظام الحالية لـ Excel</div>
-                        <div class="card-body text-center py-4">
-                            <p class="mb-4">يمكنك تصدير كافة الجداول المخزنة حالياً في السحابة لاستعمالها محلياً أو للاحتفاظ بنسخة احتياطية.</p>
-                            <div class="d-flex justify-content-center gap-3 flex-wrap">
-                                <button class="btn btn-primary btn-lg" onclick="window.exportPatientsToExcel()"><i class="fas fa-file-excel"></i> تنزيل صفحة المرضى كاملة</button>
-                                <button class="btn btn-success btn-lg" onclick="window.exportVisitsToExcel()"><i class="fas fa-file-prescription"></i> تنزيل التاريخ الطبي كامل</button>
+                    <div class="tab-pane fade" id="excelExportTab">
+                        <div class="dashboard-card">
+                            <div class="card-header"><i class="fas fa-file-download"></i> تحميل وتنزيل بيانات النظام الحالية لـ Excel</div>
+                            <div class="card-body text-center py-4">
+                                <p class="mb-4">يمكنك تصدير كافة الجداول المخزنة حالياً في السحابة لاستعمالها محلياً أو للاحتفاظ بنسخة احتياطية.</p>
+                                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                    <button class="btn btn-primary btn-lg" onclick="window.exportPatientsToExcel()"><i class="fas fa-file-excel"></i> تنزيل صفحة المرضى كاملة</button>
+                                    <button class="btn btn-success btn-lg" onclick="window.exportVisitsToExcel()"><i class="fas fa-file-prescription"></i> تنزيل التاريخ الطبي كامل</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
+                </div>
             </div>
         </div>
         <footer>

@@ -1,6 +1,7 @@
 // ===================== إعداد Firebase =====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getDatabase, ref, set, push, onValue, remove, get } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCHruhzjavgVxQuL2kFPqJ4Es1HXPG8pqM",
@@ -14,12 +15,210 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
 console.log("✅ Firebase متصل بنجاح");
+
+// ===================== متغيرات المصادقة =====================
+let currentUser = null;
 
 // ===================== المتغيرات العامة =====================
 let allPatients = [];
 let patientNamesList = [];
+
+// ===================== مراقبة حالة تسجيل الدخول =====================
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
+        showAppContent(true);
+        loadPatientsList();
+    } else {
+        currentUser = null;
+        console.log("❌ لا يوجد مستخدم مسجل الدخول");
+        showAppContent(false);
+        showLoginScreen();
+    }
+});
+
+// ===================== عرض/إخفاء محتوى التطبيق =====================
+function showAppContent(isLoggedIn) {
+    const tabs = document.querySelector('.nav-tabs');
+    const tabContent = document.querySelector('.tab-content');
+    const loginSection = document.getElementById('loginSection');
+    const appContent = document.getElementById('appContent');
+    
+    if (isLoggedIn) {
+        if (loginSection) loginSection.style.display = 'none';
+        if (appContent) appContent.style.display = 'block';
+        if (tabs) tabs.style.display = 'flex';
+        if (tabContent) tabContent.style.display = 'block';
+    } else {
+        if (loginSection) loginSection.style.display = 'flex';
+        if (appContent) appContent.style.display = 'none';
+        if (tabs) tabs.style.display = 'none';
+        if (tabContent) tabContent.style.display = 'none';
+    }
+}
+
+// ===================== شاشة تسجيل الدخول =====================
+function showLoginScreen() {
+    if (document.getElementById('loginSection')) return;
+    
+    const mainCard = document.querySelector('.main-card');
+    const loginHTML = `
+        <div id="loginSection" style="display: flex; justify-content: center; align-items: center; min-height: 500px; padding: 40px;">
+            <div style="background: var(--card-bg); border-radius: 30px; padding: 40px; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow);">
+                <i class="fas fa-lock" style="font-size: 60px; color: var(--nav-active); margin-bottom: 20px;"></i>
+                <h3 style="margin-bottom: 25px; color: var(--text-color);">تسجيل الدخول إلى النظام</h3>
+                
+                <div class="mb-3">
+                    <input type="email" id="loginEmail" class="form-control" placeholder="البريد الإلكتروني" style="border-radius: 25px; padding: 12px;">
+                </div>
+                <div class="mb-3">
+                    <input type="password" id="loginPassword" class="form-control" placeholder="كلمة المرور" style="border-radius: 25px; padding: 12px;">
+                </div>
+                
+                <button onclick="window.loginWithEmail()" class="btn btn-primary w-100 mb-3" style="border-radius: 25px; padding: 12px;">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+                
+                <hr style="margin: 20px 0;">
+                
+                <button onclick="window.showRegisterForm()" class="btn btn-outline-secondary w-100" style="border-radius: 25px; padding: 12px;">
+                    <i class="fas fa-user-plus"></i> إنشاء حساب جديد
+                </button>
+                
+                <div id="loginMessage" class="mt-3 text-danger small"></div>
+            </div>
+        </div>
+    `;
+    
+    const header = document.querySelector('.custom-header');
+    header.insertAdjacentHTML('afterend', loginHTML);
+    
+    const tabs = document.querySelector('.nav-tabs');
+    const tabContent = document.querySelector('.tab-content');
+    if (tabs) tabs.style.display = 'none';
+    if (tabContent) tabContent.style.display = 'none';
+}
+
+// ===================== وظائف المصادقة =====================
+window.loginWithEmail = async function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const messageDiv = document.getElementById('loginMessage');
+    
+    if (!email || !password) {
+        messageDiv.textContent = '⚠️ الرجاء إدخال البريد الإلكتروني وكلمة المرور';
+        return;
+    }
+    
+    try {
+        messageDiv.textContent = '⏳ جاري تسجيل الدخول...';
+        await signInWithEmailAndPassword(auth, email, password);
+        messageDiv.textContent = '✅ تم تسجيل الدخول بنجاح! جاري تحميل النظام...';
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    } catch (error) {
+        console.error(error);
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            messageDiv.textContent = '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
+        } else if (error.code === 'auth/invalid-email') {
+            messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
+        } else {
+            messageDiv.textContent = '❌ حدث خطأ: ' + error.message;
+        }
+    }
+};
+
+window.showRegisterForm = function() {
+    const loginSection = document.getElementById('loginSection');
+    loginSection.innerHTML = `
+        <div style="background: var(--card-bg); border-radius: 30px; padding: 40px; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow);">
+            <i class="fas fa-user-plus" style="font-size: 60px; color: var(--nav-active); margin-bottom: 20px;"></i>
+            <h3 style="margin-bottom: 25px; color: var(--text-color);">إنشاء حساب جديد</h3>
+            
+            <div class="mb-3">
+                <input type="email" id="registerEmail" class="form-control" placeholder="البريد الإلكتروني" style="border-radius: 25px; padding: 12px;">
+            </div>
+            <div class="mb-3">
+                <input type="password" id="registerPassword" class="form-control" placeholder="كلمة المرور (6 أحرف على الأقل)" style="border-radius: 25px; padding: 12px;">
+            </div>
+            <div class="mb-3">
+                <input type="password" id="confirmPassword" class="form-control" placeholder="تأكيد كلمة المرور" style="border-radius: 25px; padding: 12px;">
+            </div>
+            
+            <button onclick="window.registerNewUser()" class="btn btn-success w-100 mb-3" style="border-radius: 25px; padding: 12px;">
+                <i class="fas fa-check"></i> إنشاء حساب
+            </button>
+            
+            <button onclick="window.showLoginForm()" class="btn btn-outline-secondary w-100" style="border-radius: 25px; padding: 12px;">
+                <i class="fas fa-arrow-right"></i> العودة إلى تسجيل الدخول
+            </button>
+            
+            <div id="registerMessage" class="mt-3 text-danger small"></div>
+        </div>
+    `;
+};
+
+window.showLoginForm = function() {
+    location.reload();
+};
+
+window.registerNewUser = async function() {
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const messageDiv = document.getElementById('registerMessage');
+    
+    if (!email || !password) {
+        messageDiv.textContent = '⚠️ الرجاء ملء جميع الحقول';
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        messageDiv.textContent = '⚠️ كلمة المرور وتأكيدها غير متطابقتين';
+        return;
+    }
+    
+    if (password.length < 6) {
+        messageDiv.textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+        return;
+    }
+    
+    try {
+        messageDiv.textContent = '⏳ جاري إنشاء الحساب...';
+        await createUserWithEmailAndPassword(auth, email, password);
+        messageDiv.textContent = '✅ تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...';
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    } catch (error) {
+        console.error(error);
+        if (error.code === 'auth/email-already-in-use') {
+            messageDiv.textContent = '❌ هذا البريد الإلكتروني مسجل بالفعل';
+        } else if (error.code === 'auth/invalid-email') {
+            messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
+        } else if (error.code === 'auth/weak-password') {
+            messageDiv.textContent = '❌ كلمة المرور ضعيفة جداً';
+        } else {
+            messageDiv.textContent = '❌ حدث خطأ: ' + error.message;
+        }
+    }
+};
+
+window.logoutUser = async function() {
+    try {
+        await signOut(auth);
+        alert('👋 تم تسجيل الخروج بنجاح');
+        location.reload();
+    } catch (error) {
+        console.error(error);
+        alert('❌ حدث خطأ أثناء تسجيل الخروج');
+    }
+};
 
 // ===================== دالة التحويل الذكية والمطورة للتواريخ =====================
 function parseExcelDate(excelDateValue) {
@@ -27,25 +226,20 @@ function parseExcelDate(excelDateValue) {
     
     let dateStr = String(excelDateValue).trim();
     
-    // 1. إذا كان التاريخ يحتوي على شرطات (مثل 25-04-2026)، يتم تحويلها فوراً إلى مائل ليتوافق مع البرنامج
     if (dateStr.includes('-')) {
-        // إزالة أي أصفار زائدة في البداية إن وجدت وتوحيد الفاصلة
         return dateStr.replace(/-/g, '/');
     }
     
-    // 2. إذا كان التاريخ يحتوي على مائل أصلاً (مثل 25/04/2026)
     if (dateStr.includes('/')) {
         return dateStr;
     }
     
-    // 3. إذا كان رقماً تسلسلياً خاماً من إكسل (مثل 46143)
     const num = parseFloat(excelDateValue);
     if (!isNaN(num)) {
         const dateObj = new Date(Math.round((num - 25569) * 86400 * 1000));
         const day = dateObj.getDate();
         const month = dateObj.getMonth() + 1;
         const year = dateObj.getFullYear();
-        
         return `${day}/${month}/${year}`;
     }
     
@@ -222,7 +416,7 @@ window.addVisitWithAutocomplete = async function() {
         totalAmount: totalAmount,
         paidAmount: paidAmount,
         remainingAmount: remainingAmount >= 0 ? remainingAmount : 0,
-        date: now.toLocaleDateString('ar-EG'), // ستنتج بالتنسيق المائل الافتراضي للبرنامج
+        date: now.toLocaleDateString('ar-EG'),
         time: now.toLocaleTimeString('ar-EG'),
         timestamp: now.getTime()
     };
@@ -433,41 +627,37 @@ window.getFinancialReportAutocomplete = async () => {
     document.getElementById('financeResult').innerHTML = html;
 };
 
-// ===================== بوابات حماية الحذف الشامل بالباسوورد =====================
+// ===================== بوابات حماية الحذف الشامل (معدلة) =====================
 window.clearAllPatientsData = async () => {
-    const password = prompt('🚨 إجراء خطر للغاية! يرجى إدخال كلمة مرور المسؤول للمسح الشامل للمرضى:');
-    if (password === null) return;
+    if (!currentUser) {
+        alert('⚠️ يجب تسجيل الدخول أولاً');
+        return;
+    }
     
-    if (password === "Admin123456") {
-        if (confirm('هل أنت متأكد تماماً من تصفير جدول كافة المرضى نهائياً؟')) {
-            try {
-                await remove(ref(db, 'patients'));
-                alert('✅ تم تصفير جدول المرضى بنجاح من السحابة.');
-            } catch (error) {
-                alert('حدث خطأ: ' + error.message);
-            }
+    if (confirm('🚨 هل أنت متأكد من حذف جميع المرضى؟ هذا الإجراء لا يمكن التراجع عنه!')) {
+        try {
+            await remove(ref(db, 'patients'));
+            alert('✅ تم حذف جميع المرضى');
+        } catch (error) {
+            alert('❌ حدث خطأ: ' + error.message);
         }
-    } else {
-        alert('❌ كلمة المرور غير صحيحة! تم إلغاء عملية الحذف حماية للنظام.');
     }
 };
 
 window.clearAllVisitsData = async () => {
-    const password = prompt('🚨 إجراء خطر للغاية! يرجى إدخال كلمة مرور المسؤول لمسح التاريخ الطبي بالكامل:');
-    if (password === null) return;
+    if (!currentUser) {
+        alert('⚠️ يجب تسجيل الدخول أولاً');
+        return;
+    }
     
-    if (password === "Admin123456") {
-        if (confirm('هل أنت متأكد تماماً من تصفير وحذف كافة الزيارات المسجلة؟')) {
-            try {
-                await remove(ref(db, 'visits'));
-                alert('✅ تم تصفير التاريخ الطبي والزيارات بالكامل.');
-                if(document.getElementById('historyResult')) document.getElementById('historyResult').innerHTML = '';
-            } catch (error) {
-                alert('حدث خطأ: ' + error.message);
-            }
+    if (confirm('🚨 هل أنت متأكد من حذف جميع الزيارات؟ هذا الإجراء لا يمكن التراجع عنه!')) {
+        try {
+            await remove(ref(db, 'visits'));
+            alert('✅ تم حذف جميع الزيارات');
+            if(document.getElementById('historyResult')) document.getElementById('historyResult').innerHTML = '';
+        } catch (error) {
+            alert('❌ حدث خطأ: ' + error.message);
         }
-    } else {
-        alert('❌ كلمة المرور غير صحيحة! تم إلغاء عملية الحذف حماية للنظام.');
     }
 };
 
@@ -569,7 +759,6 @@ window.importVisitsExcel = async function() {
                 const paid = parseFloat(row["المبلغ المدفوع"]) || 0;
                 const remaining = total - paid;
                 
-                // فك التشفير والتحويل المزدوج للشرطات (-) والمائل (/) والسيريال
                 const structuredDate = parseExcelDate(row["التاريخ"]);
                 
                 const newVisitRef = push(ref(db, 'visits'));
@@ -643,5 +832,5 @@ window.exportVisitsToExcel = async function() {
     }
 };
 
-// تحميل البيانات البدئي عند تشغيل المنصة
-loadPatientsList();
+// ===================== تحميل البيانات البدئي =====================
+// تم نقل loadPatientsList() داخل onAuthStateChanged
