@@ -21,8 +21,7 @@ console.log("✅ Firebase متصل بنجاح");
 
 // ===================== قائمة البريد الإلكتروني للأدمن =====================
 const ADMIN_EMAILS = [
-    "admin@clinic.com",
-    "reyad@clinic.com"
+    "admin@clinic.com"
 ];
 
 // ===================== متغيرات المصادقة =====================
@@ -46,20 +45,44 @@ onAuthStateChanged(auth, (user) => {
         console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
         console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
         
+        // إظهار عناصر المستخدم المسجل
+        document.getElementById('loginContainer').style.display = 'none';
+        document.getElementById('appContent').style.display = 'block';
+        document.getElementById('topButtons').style.display = 'flex';
+        document.getElementById('welcomeMessage').style.display = 'block';
+        
+        // عرض اسم المستخدم
         const userNameSpan = document.getElementById('userNameDisplay');
         if (userNameSpan) {
             const displayName = user.email.split('@')[0];
             userNameSpan.textContent = `مرحباً ${displayName}`;
         }
         
-        showAppContent(true);
+        // إظهار التبويبات
+        const tabs = document.querySelector('.nav-tabs');
+        const tabContent = document.querySelector('.tab-content');
+        if (tabs) tabs.style.display = 'flex';
+        if (tabContent) tabContent.style.display = 'block';
+        
+        // تطبيق صلاحيات الأدمن
         applyPermissionsBasedOnRole();
+        
+        // تحميل البيانات
         loadPatientsList();
     } else {
         currentUser = null;
         console.log("❌ لا يوجد مستخدم مسجل الدخول");
-        showAppContent(false);
-        showLoginScreen();
+        
+        // إظهار شاشة تسجيل الدخول
+        document.getElementById('loginContainer').style.display = 'flex';
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('topButtons').style.display = 'none';
+        document.getElementById('welcomeMessage').style.display = 'none';
+        
+        const tabs = document.querySelector('.nav-tabs');
+        const tabContent = document.querySelector('.tab-content');
+        if (tabs) tabs.style.display = 'none';
+        if (tabContent) tabContent.style.display = 'none';
     }
 });
 
@@ -70,41 +93,19 @@ function applyPermissionsBasedOnRole() {
     
     adminOnlyElements.forEach(el => {
         if (isAdmin) {
+            el.style.display = '';
             if (el.classList.contains('nav-link')) {
                 const parentItem = el.closest('.nav-item');
                 if (parentItem) parentItem.style.display = '';
-            } else {
-                el.style.display = '';
             }
         } else {
+            el.style.display = 'none';
             if (el.classList.contains('nav-link')) {
                 const parentItem = el.closest('.nav-item');
                 if (parentItem) parentItem.style.display = 'none';
-            } else {
-                el.style.display = 'none';
             }
         }
     });
-}
-
-// ===================== عرض/إخفاء محتوى التطبيق =====================
-function showAppContent(isLoggedIn) {
-    const tabs = document.querySelector('.nav-tabs');
-    const tabContent = document.querySelector('.tab-content');
-    const loginSection = document.getElementById('loginSection');
-    const appContent = document.getElementById('appContent');
-    
-    if (isLoggedIn) {
-        if (loginSection) loginSection.style.display = 'none';
-        if (appContent) appContent.style.display = 'block';
-        if (tabs) tabs.style.display = 'flex';
-        if (tabContent) tabContent.style.display = 'block';
-    } else {
-        if (loginSection) loginSection.style.display = 'flex';
-        if (appContent) appContent.style.display = 'none';
-        if (tabs) tabs.style.display = 'none';
-        if (tabContent) tabContent.style.display = 'none';
-    }
 }
 
 // ===================== حفظ البريد الإلكتروني في localStorage =====================
@@ -118,48 +119,7 @@ function getSavedEmail() {
     return localStorage.getItem('savedEmail') || '';
 }
 
-// ===================== شاشة تسجيل الدخول =====================
-function showLoginScreen() {
-    if (document.getElementById('loginSection')) return;
-    
-    const mainCard = document.querySelector('.main-card');
-    const savedEmail = getSavedEmail();
-    
-    const loginHTML = `
-        <div id="loginSection" style="display: flex; justify-content: center; align-items: center; min-height: 500px; padding: 40px;">
-            <div style="background: var(--card-bg); border-radius: 30px; padding: 40px; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow);">
-                <i class="fas fa-lock" style="font-size: 60px; color: var(--nav-active); margin-bottom: 20px;"></i>
-                <h3 style="margin-bottom: 25px; color: var(--text-color);">تسجيل الدخول إلى النظام</h3>
-                
-                <div class="mb-3" style="position: relative;">
-                    <input type="email" id="loginEmail" class="form-control" placeholder="البريد الإلكتروني" style="border-radius: 25px; padding: 12px;" value="${savedEmail}">
-                    <button onclick="window.toggleSaveEmail()" id="saveEmailBtn" class="save-email-btn" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--nav-active);">
-                        <i class="fas ${savedEmail ? 'fa-check-circle' : 'fa-circle'}"></i>
-                    </button>
-                </div>
-                <div class="mb-3">
-                    <input type="password" id="loginPassword" class="form-control" placeholder="كلمة المرور" style="border-radius: 25px; padding: 12px;">
-                </div>
-                
-                <button onclick="window.loginWithEmail()" class="btn btn-primary w-100 mb-3" style="border-radius: 25px; padding: 12px;">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-                
-                <div id="loginMessage" class="mt-3 text-danger small"></div>
-            </div>
-        </div>
-    `;
-    
-    const header = document.querySelector('.custom-header');
-    header.insertAdjacentHTML('afterend', loginHTML);
-    
-    const tabs = document.querySelector('.nav-tabs');
-    const tabContent = document.querySelector('.tab-content');
-    if (tabs) tabs.style.display = 'none';
-    if (tabContent) tabContent.style.display = 'none';
-}
-
-// ===================== حفظ/إلغاء حفظ البريد الإلكتروني =====================
+// ===================== وظائف تسجيل الدخول =====================
 window.toggleSaveEmail = function() {
     const emailInput = document.getElementById('loginEmail');
     const saveBtn = document.getElementById('saveEmailBtn');
@@ -174,7 +134,6 @@ window.toggleSaveEmail = function() {
     }
 };
 
-// ===================== وظائف تسجيل الدخول =====================
 window.loginWithEmail = async function() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
@@ -188,7 +147,7 @@ window.loginWithEmail = async function() {
     try {
         messageDiv.textContent = '⏳ جاري تسجيل الدخول...';
         await signInWithEmailAndPassword(auth, email, password);
-        messageDiv.textContent = '✅ تم تسجيل الدخول بنجاح! جاري تحميل النظام...';
+        messageDiv.textContent = '✅ تم تسجيل الدخول بنجاح!';
         setTimeout(() => {
             location.reload();
         }, 1000);
@@ -339,7 +298,7 @@ function displayPatientsList(searchTerm = '') {
         );
     }
     
-    let html = '<table class="table table-bordered table-hover"><thead class="table-light"><tr><th>#</th><th>الاسم</th><th>العمر</th><th>الجوال</th><th>العنوان</th><th>تاريخ التسجيل</th><th>إجراءات</th></tr></thead><tbody>';
+    let html = '<table class="table table-bordered table-hover"><thead class="table-light"><tr><th>#</th><th>الاسم</th><th>العمر</th><th>الجوال</th><th>العنوان</th><th>تاريخ التسجيل</th><th>إجراءات</th></table></thead><tbody>';
     
     let index = 1;
     if (filteredPatients.length > 0) {
@@ -402,7 +361,7 @@ function updateAutocomplete() {
     }
 }
 
-// ===================== إضافة مريض جديد (مع العمر) =====================
+// ===================== إضافة مريض جديد =====================
 window.addPatient = async function() {
     const name = document.getElementById('patientName').value.trim();
     if (!name) {
@@ -452,7 +411,7 @@ window.deletePatient = async (id) => {
     }
 };
 
-// ===================== إضافة زيارة (مع عدد العلب والمبلغ المتبقي يسمح بالسالب) =====================
+// ===================== إضافة زيارة =====================
 window.addVisitWithAutocomplete = async function() {
     const patientId = document.getElementById('selectedPatientId').value;
     if (!patientId) {
@@ -465,7 +424,7 @@ window.addVisitWithAutocomplete = async function() {
     
     const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
     const paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-    const remainingAmount = totalAmount - paidAmount;  // يسمح بالقيم السالبة (دائن للمريض)
+    const remainingAmount = totalAmount - paidAmount;
     const boxesCount = parseFloat(document.getElementById('boxesCount').value) || 0;
     
     const newVisitRef = push(ref(db, 'visits'));
@@ -564,7 +523,7 @@ window.deleteVisit = async (id) => {
     }
 };
 
-// ===================== التقارير المالية (تدعم القيم السالبة) =====================
+// ===================== التقارير المالية =====================
 window.getFinancialReportAutocomplete = async () => {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -670,8 +629,7 @@ window.getFinancialReportAutocomplete = async () => {
                             <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
                         </tr>
                     </tfoot>
-                \d+
-            </div>`;
+                </div>`;
         } else {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
         }
@@ -933,3 +891,14 @@ window.exportVisitsToExcel = async function() {
         alert("❌ فشل التصدير: " + err.message);
     }
 };
+
+// استعادة البريد الإلكتروني المحفوظ عند تحميل الصفحة
+window.addEventListener('DOMContentLoaded', () => {
+    const savedEmail = getSavedEmail();
+    if (savedEmail) {
+        const emailInput = document.getElementById('loginEmail');
+        const saveBtn = document.getElementById('saveEmailBtn');
+        if (emailInput) emailInput.value = savedEmail;
+        if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-check-circle"></i>';
+    }
+});
