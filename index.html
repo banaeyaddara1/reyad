@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صيدلية فراس - نظام إدارة العيادة</title>
-    <!-- Bootstrap CSS - تأكيد التحميل -->
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     
     <style>
-        /* أساسيات الصفحة */
         * { 
             font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; 
             margin: 0; 
@@ -22,7 +21,6 @@
             box-sizing: border-box; 
         }
         
-        /* المتغيرات */
         :root {
             --bg-gradient-start: #1a5f7a;
             --bg-gradient-end: #0d3b3b;
@@ -249,7 +247,15 @@
             transform: scale(1.05); 
         }
         
-        /* تحسين عرض الجدول */
+        .btn-warning {
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn-warning:hover {
+            transform: scale(1.05);
+        }
+        
         .table-responsive { 
             overflow-x: auto;
             border-radius: 15px;
@@ -417,7 +423,6 @@
             font-weight: bold;
         }
         
-        /* شاشة تسجيل الدخول */
         .login-container {
             display: flex;
             justify-content: center;
@@ -436,7 +441,6 @@
             box-shadow: var(--shadow);
         }
         
-        /* تحسين عرض البطاقات */
         .row.g-3 {
             display: flex;
             flex-wrap: wrap;
@@ -453,6 +457,23 @@
             .col-md-3 { flex: 0 0 calc(25% - 1rem); }
             .col-md-4 { flex: 0 0 calc(33.333% - 1rem); }
             .col-md-12 { flex: 0 0 100%; }
+        }
+        
+        .patient-info-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .patient-info-card i {
+            margin-left: 10px;
+        }
+        
+        .modal-content {
+            background: var(--card-bg);
+            color: var(--text-color);
         }
     </style>
 </head>
@@ -670,6 +691,41 @@
         <footer>
             <i class="fas fa-code"></i> Powered By Eyad Sulayman | جميع الخدمات محفوظة © 2026
         </footer>
+    </div>
+
+    <!-- مودال تعديل المريض -->
+    <div class="modal fade" id="editPatientModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-edit"></i> تعديل بيانات المريض</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editPatientId">
+                    <div class="mb-3">
+                        <label class="form-label">الاسم الكامل</label>
+                        <input type="text" id="editPatientName" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">العمر</label>
+                        <input type="number" id="editPatientAge" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم الجوال</label>
+                        <input type="tel" id="editPatientPhone" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">العنوان</label>
+                        <input type="text" id="editPatientAddress" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="savePatientEdit()">حفظ التغييرات</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- مودال الإعدادات -->
