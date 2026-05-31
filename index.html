@@ -15,7 +15,6 @@
     <style>
         * { font-family: 'Tahoma', 'Segoe UI', 'Cairo', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* الوضع الفاتح (النهاري) */
         :root {
             --bg-gradient-start: #1a5f7a;
             --bg-gradient-end: #0d3b3b;
@@ -31,7 +30,6 @@
             --shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
         
-        /* الوضع الليلي (الافتراضي) */
         body.dark-mode {
             --bg-gradient-start: #0a1a1a;
             --bg-gradient-end: #061212;
@@ -129,10 +127,23 @@
             display: inline-block;
         }
         
-        .logout-btn {
+        .top-buttons {
             position: absolute;
             top: 20px;
-            left: 80px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .welcome-message {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 14px;
+            color: white;
         }
         
         .nav-tabs { 
@@ -239,7 +250,7 @@
         footer { text-align: center; padding: 20px; color: var(--footer-text); font-size: 14px; }
         
         .mode-toggle {
-            position: fixed; top: 20px; left: 20px; z-index: 1000; background: var(--card-bg);
+            position: fixed; bottom: 20px; left: 20px; z-index: 1000; background: var(--card-bg);
             border: none; border-radius: 50%; width: 50px; height: 50px; cursor: pointer;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2); transition: all 0.3s; font-size: 1.3rem; color: var(--text-color);
         }
@@ -247,7 +258,6 @@
         .payment-details { background: var(--border-color); border-radius: 15px; padding: 15px; margin-top: 10px; }
         .filter-card { background: var(--border-color); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
         
-        /* Autocomplete Style */
         .ui-autocomplete {
             background: var(--card-bg); color: var(--text-color); border: 1px solid var(--nav-active);
             border-radius: 15px; max-height: 250px; overflow-y: auto; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -255,15 +265,35 @@
         .ui-autocomplete li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .ui-autocomplete li:hover { background: var(--nav-active); color: white; }
         
-        .patient-result { display: flex; justify-content: space-between; align-items: center; }
-        .patient-name { font-weight: bold; font-size: 1rem; }
-        .patient-phone { font-size: 11px; opacity: 0.7; }
-        
         .stat-card { background: linear-gradient(135deg, #11998e, #38ef7d); border-radius: 20px; padding: 20px; text-align: center; color: white; }
         .custom-progress { background: rgba(255,255,255,0.2); border-radius: 50px; overflow: hidden; height: 30px; }
         .custom-progress-bar { background: #38ef7d; height: 100%; border-radius: 50px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #000; }
         
         .form-control:focus, .form-select:focus { border-color: var(--nav-active); box-shadow: 0 0 0 0.2rem rgba(26,95,122,0.25); }
+        
+        .settings-modal .modal-content {
+            background: var(--card-bg);
+            color: var(--text-color);
+        }
+        
+        .admin-only {
+            display: none;
+        }
+        
+        .save-email-btn {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--nav-active);
+            cursor: pointer;
+        }
+        
+        .password-wrapper {
+            position: relative;
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -274,10 +304,16 @@
     <div class="container">
         <div class="main-card animate__animated animate__fadeInUp">
             <div class="custom-header">
-                <div class="logout-btn">
+                <div class="top-buttons">
                     <button onclick="window.logoutUser()" class="btn btn-sm btn-danger" style="border-radius: 20px;">
                         <i class="fas fa-sign-out-alt"></i> تسجيل خروج
                     </button>
+                    <button onclick="window.openSettings()" class="btn btn-sm btn-secondary" style="border-radius: 20px;">
+                        <i class="fas fa-cog"></i> الإعدادات
+                    </button>
+                </div>
+                <div class="welcome-message" id="welcomeMessage">
+                    <i class="fas fa-user-circle"></i> <span id="userNameDisplay"></span>
                 </div>
                 <div class="logo-container">
                     <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
@@ -295,8 +331,8 @@
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelImportTab"><i class="fas fa-file-upload"></i> استيراد البيانات (Excel)</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-file-download"></i> تصدير البيانات</button></li>
+                    <li class="nav-item admin-only" id="importTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelImportTab"><i class="fas fa-file-upload"></i> استيراد البيانات (Excel)</button></li>
+                    <li class="nav-item admin-only" id="exportTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-file-download"></i> تصدير البيانات</button></li>
                 </ul>
 
                 <div class="tab-content">
@@ -304,7 +340,7 @@
                         <div class="dashboard-card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <span><i class="fas fa-user-plus"></i> إضافة مريض جديد</span>
-                                <button class="btn btn-sm btn-danger" onclick="window.clearAllPatientsData()"><i class="fas fa-trash-alt"></i> مسح كافة المرضى</button>
+                                <button class="btn btn-sm btn-danger admin-only" id="clearPatientsBtn" onclick="window.clearAllPatientsData()"><i class="fas fa-trash-alt"></i> مسح كافة المرضى</button>
                             </div>
                             <div class="card-body">
                                 <div class="row g-3">
@@ -326,7 +362,10 @@
 
                     <div class="tab-pane fade" id="visits">
                         <div class="dashboard-card">
-                            <div class="card-header"><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</div>
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-stethoscope"></i> تسجيل زيارة جديدة</span>
+                                <button class="btn btn-sm btn-danger admin-only" id="clearVisitsBtn" onclick="window.clearAllVisitsData()"><i class="fas fa-trash-alt"></i> مسح كافة الزيارات</button>
+                            </div>
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
@@ -347,10 +386,7 @@
 
                     <div class="tab-pane fade" id="history">
                         <div class="dashboard-card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-search"></i> البحث في التاريخ الطبي</span>
-                                <button class="btn btn-sm btn-danger" onclick="window.clearAllVisitsData()"><i class="fas fa-trash-alt"></i> مسح كافة الزيارات</button>
-                            </div>
+                            <div class="card-header"><i class="fas fa-search"></i> البحث في التاريخ الطبي</div>
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label"><i class="fas fa-user"></i> اختر المريض</label>
@@ -439,6 +475,45 @@
         <footer>
             <i class="fas fa-code"></i> Powered By Eyad Sulayman | جميع الخدمات محفوظة © 2026
         </footer>
+    </div>
+
+    <!-- مودال الإعدادات -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content settings-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-cog"></i> إعدادات النظام</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-user-shield"></i> دخول الأدمن</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="adminPassword" class="form-control" placeholder="أدخل كلمة مرور الأدمن">
+                        </div>
+                        <button class="btn btn-primary mt-2 w-100" onclick="window.verifyAdmin()">
+                            <i class="fas fa-unlock-alt"></i> تأكيد
+                        </button>
+                        <div id="adminMessage" class="mt-2 text-danger small"></div>
+                    </div>
+                    <hr>
+                    <div id="adminPanel" style="display: none;">
+                        <h6><i class="fas fa-user-plus"></i> إنشاء حساب جديد</h6>
+                        <div class="mb-2">
+                            <input type="email" id="newUserEmail" class="form-control mb-2" placeholder="البريد الإلكتروني للمستخدم الجديد">
+                            <input type="password" id="newUserPassword" class="form-control mb-2" placeholder="كلمة المرور">
+                            <button class="btn btn-success w-100" onclick="window.createNewUserByAdmin()">
+                                <i class="fas fa-user-plus"></i> إنشاء حساب
+                            </button>
+                        </div>
+                        <div id="createUserMessage" class="text-success small"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
