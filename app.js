@@ -19,6 +19,13 @@ const auth = getAuth(app);
 
 console.log("✅ Firebase متصل بنجاح");
 
+// ===================== قائمة البريد الإلكتروني للأدمن =====================
+// هؤلاء هم المستخدمون الذين لديهم صلاحية الأدمن (يُعرفون ببريدهم الإلكتروني فقط)
+const ADMIN_EMAILS = [
+    "admin@clinic.com",     // حساب الأدمن الرئيسي
+    "reyad@clinic.com"      // يمكن إضافة المزيد هنا
+];
+
 // ===================== متغيرات المصادقة =====================
 let currentUser = null;
 
@@ -26,12 +33,29 @@ let currentUser = null;
 let allPatients = [];
 let patientNamesList = [];
 
+// ===================== دالة التحقق من صلاحية الأدمن =====================
+function isCurrentUserAdmin() {
+    return currentUser && ADMIN_EMAILS.includes(currentUser.email);
+}
+
 // ===================== مراقبة حالة تسجيل الدخول =====================
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
+        const isAdmin = isCurrentUserAdmin();
+        
         console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
+        console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
+        
+        // عرض اسم المستخدم في رسالة الترحيب
+        const userNameSpan = document.getElementById('userNameDisplay');
+        if (userNameSpan) {
+            const displayName = user.email.split('@')[0];
+            userNameSpan.textContent = `مرحباً ${displayName}`;
+        }
+        
         showAppContent(true);
+        applyPermissionsBasedOnRole();
         loadPatientsList();
     } else {
         currentUser = null;
@@ -40,6 +64,32 @@ onAuthStateChanged(auth, (user) => {
         showLoginScreen();
     }
 });
+
+// ===================== تطبيق الصلاحيات حسب دور المستخدم =====================
+function applyPermissionsBasedOnRole() {
+    const isAdmin = isCurrentUserAdmin();
+    const adminOnlyElements = document.querySelectorAll('.admin-only');
+    
+    adminOnlyElements.forEach(el => {
+        if (isAdmin) {
+            // إظهار عناصر الأدمن
+            if (el.classList.contains('nav-link')) {
+                const parentItem = el.closest('.nav-item');
+                if (parentItem) parentItem.style.display = '';
+            } else {
+                el.style.display = '';
+            }
+        } else {
+            // إخفاء عناصر الأدمن للمستخدمين العاديين
+            if (el.classList.contains('nav-link')) {
+                const parentItem = el.closest('.nav-item');
+                if (parentItem) parentItem.style.display = 'none';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    });
+}
 
 // ===================== عرض/إخفاء محتوى التطبيق =====================
 function showAppContent(isLoggedIn) {
@@ -61,19 +111,35 @@ function showAppContent(isLoggedIn) {
     }
 }
 
+// ===================== حفظ البريد الإلكتروني في localStorage =====================
+function saveEmailToLocalStorage(email) {
+    if (email) {
+        localStorage.setItem('savedEmail', email);
+    }
+}
+
+function getSavedEmail() {
+    return localStorage.getItem('savedEmail') || '';
+}
+
 // ===================== شاشة تسجيل الدخول =====================
 function showLoginScreen() {
     if (document.getElementById('loginSection')) return;
     
     const mainCard = document.querySelector('.main-card');
+    const savedEmail = getSavedEmail();
+    
     const loginHTML = `
         <div id="loginSection" style="display: flex; justify-content: center; align-items: center; min-height: 500px; padding: 40px;">
             <div style="background: var(--card-bg); border-radius: 30px; padding: 40px; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow);">
                 <i class="fas fa-lock" style="font-size: 60px; color: var(--nav-active); margin-bottom: 20px;"></i>
                 <h3 style="margin-bottom: 25px; color: var(--text-color);">تسجيل الدخول إلى النظام</h3>
                 
-                <div class="mb-3">
-                    <input type="email" id="loginEmail" class="form-control" placeholder="البريد الإلكتروني" style="border-radius: 25px; padding: 12px;">
+                <div class="mb-3" style="position: relative;">
+                    <input type="email" id="loginEmail" class="form-control" placeholder="البريد الإلكتروني" style="border-radius: 25px; padding: 12px;" value="${savedEmail}">
+                    <button onclick="window.toggleSaveEmail()" id="saveEmailBtn" class="save-email-btn" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--nav-active);">
+                        <i class="fas ${savedEmail ? 'fa-check-circle' : 'fa-circle'}"></i>
+                    </button>
                 </div>
                 <div class="mb-3">
                     <input type="password" id="loginPassword" class="form-control" placeholder="كلمة المرور" style="border-radius: 25px; padding: 12px;">
@@ -81,12 +147,6 @@ function showLoginScreen() {
                 
                 <button onclick="window.loginWithEmail()" class="btn btn-primary w-100 mb-3" style="border-radius: 25px; padding: 12px;">
                     <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-                
-                <hr style="margin: 20px 0;">
-                
-                <button onclick="window.showRegisterForm()" class="btn btn-outline-secondary w-100" style="border-radius: 25px; padding: 12px;">
-                    <i class="fas fa-user-plus"></i> إنشاء حساب جديد
                 </button>
                 
                 <div id="loginMessage" class="mt-3 text-danger small"></div>
@@ -103,7 +163,22 @@ function showLoginScreen() {
     if (tabContent) tabContent.style.display = 'none';
 }
 
-// ===================== وظائف المصادقة =====================
+// ===================== حفظ/إلغاء حفظ البريد الإلكتروني =====================
+window.toggleSaveEmail = function() {
+    const emailInput = document.getElementById('loginEmail');
+    const saveBtn = document.getElementById('saveEmailBtn');
+    const email = emailInput.value.trim();
+    
+    if (email) {
+        saveEmailToLocalStorage(email);
+        saveBtn.innerHTML = '<i class="fas fa-check-circle"></i>';
+    } else {
+        localStorage.removeItem('savedEmail');
+        saveBtn.innerHTML = '<i class="fas fa-circle"></i>';
+    }
+};
+
+// ===================== وظائف تسجيل الدخول =====================
 window.loginWithEmail = async function() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
@@ -133,82 +208,6 @@ window.loginWithEmail = async function() {
     }
 };
 
-window.showRegisterForm = function() {
-    const loginSection = document.getElementById('loginSection');
-    loginSection.innerHTML = `
-        <div style="background: var(--card-bg); border-radius: 30px; padding: 40px; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow);">
-            <i class="fas fa-user-plus" style="font-size: 60px; color: var(--nav-active); margin-bottom: 20px;"></i>
-            <h3 style="margin-bottom: 25px; color: var(--text-color);">إنشاء حساب جديد</h3>
-            
-            <div class="mb-3">
-                <input type="email" id="registerEmail" class="form-control" placeholder="البريد الإلكتروني" style="border-radius: 25px; padding: 12px;">
-            </div>
-            <div class="mb-3">
-                <input type="password" id="registerPassword" class="form-control" placeholder="كلمة المرور (6 أحرف على الأقل)" style="border-radius: 25px; padding: 12px;">
-            </div>
-            <div class="mb-3">
-                <input type="password" id="confirmPassword" class="form-control" placeholder="تأكيد كلمة المرور" style="border-radius: 25px; padding: 12px;">
-            </div>
-            
-            <button onclick="window.registerNewUser()" class="btn btn-success w-100 mb-3" style="border-radius: 25px; padding: 12px;">
-                <i class="fas fa-check"></i> إنشاء حساب
-            </button>
-            
-            <button onclick="window.showLoginForm()" class="btn btn-outline-secondary w-100" style="border-radius: 25px; padding: 12px;">
-                <i class="fas fa-arrow-right"></i> العودة إلى تسجيل الدخول
-            </button>
-            
-            <div id="registerMessage" class="mt-3 text-danger small"></div>
-        </div>
-    `;
-};
-
-window.showLoginForm = function() {
-    location.reload();
-};
-
-window.registerNewUser = async function() {
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    const messageDiv = document.getElementById('registerMessage');
-    
-    if (!email || !password) {
-        messageDiv.textContent = '⚠️ الرجاء ملء جميع الحقول';
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        messageDiv.textContent = '⚠️ كلمة المرور وتأكيدها غير متطابقتين';
-        return;
-    }
-    
-    if (password.length < 6) {
-        messageDiv.textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-        return;
-    }
-    
-    try {
-        messageDiv.textContent = '⏳ جاري إنشاء الحساب...';
-        await createUserWithEmailAndPassword(auth, email, password);
-        messageDiv.textContent = '✅ تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...';
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
-    } catch (error) {
-        console.error(error);
-        if (error.code === 'auth/email-already-in-use') {
-            messageDiv.textContent = '❌ هذا البريد الإلكتروني مسجل بالفعل';
-        } else if (error.code === 'auth/invalid-email') {
-            messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
-        } else if (error.code === 'auth/weak-password') {
-            messageDiv.textContent = '❌ كلمة المرور ضعيفة جداً';
-        } else {
-            messageDiv.textContent = '❌ حدث خطأ: ' + error.message;
-        }
-    }
-};
-
 window.logoutUser = async function() {
     try {
         await signOut(auth);
@@ -220,7 +219,68 @@ window.logoutUser = async function() {
     }
 };
 
-// ===================== دالة التحويل الذكية والمطورة للتواريخ =====================
+// ===================== إعدادات الأدمن (تظهر فقط للأدمن) =====================
+window.openSettings = function() {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصفحة متاحة فقط للأدمن');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
+    modal.show();
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserPassword').value = '';
+    document.getElementById('createUserMessage').textContent = '';
+};
+
+window.createNewUserByAdmin = async function() {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
+        return;
+    }
+    
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    const messageDiv = document.getElementById('createUserMessage');
+    
+    if (!email || !password) {
+        messageDiv.textContent = '⚠️ الرجاء ملء جميع الحقول';
+        messageDiv.style.color = 'red';
+        return;
+    }
+    
+    if (password.length < 6) {
+        messageDiv.textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+        messageDiv.style.color = 'red';
+        return;
+    }
+    
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        messageDiv.textContent = '✅ تم إنشاء الحساب بنجاح!';
+        messageDiv.style.color = 'green';
+        document.getElementById('newUserEmail').value = '';
+        document.getElementById('newUserPassword').value = '';
+        
+        setTimeout(() => {
+            messageDiv.textContent = '';
+        }, 3000);
+    } catch (error) {
+        console.error(error);
+        if (error.code === 'auth/email-already-in-use') {
+            messageDiv.textContent = '❌ هذا البريد الإلكتروني مسجل بالفعل';
+        } else if (error.code === 'auth/invalid-email') {
+            messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
+        } else if (error.code === 'auth/weak-password') {
+            messageDiv.textContent = '❌ كلمة المرور ضعيفة جداً';
+        } else {
+            messageDiv.textContent = '❌ حدث خطأ: ' + error.message;
+        }
+        messageDiv.style.color = 'red';
+    }
+};
+
+// ===================== دالة التحويل الذكية للتواريخ =====================
 function parseExcelDate(excelDateValue) {
     if (!excelDateValue) return new Date().toLocaleDateString('ar-EG');
     
@@ -297,9 +357,9 @@ function displayPatientsList(searchTerm = '') {
             </tr>`;
         });
     } else {
-        html += '<tr><td colspan="6" class="text-center">لا يوجد مرضى مسجلين</td></tr>';
+        html += '<tr><td colspan="6" class="text-center">لا يوجد مرضى مسجلين</td><tr>';
     }
-    html += '</tbody></table>';
+    html += '</tbody></tr>';
     document.getElementById('patientsList').innerHTML = html;
 }
 
@@ -344,7 +404,7 @@ function updateAutocomplete() {
     }
 }
 
-// ===================== إضافة مريض جديد يدوياً =====================
+// ===================== إضافة مريض جديد =====================
 window.addPatient = async function() {
     const name = document.getElementById('patientName').value.trim();
     if (!name) {
@@ -392,7 +452,7 @@ window.deletePatient = async (id) => {
     }
 };
 
-// ===================== إضافة زيارة يدوياً =====================
+// ===================== إضافة زيارة =====================
 window.addVisitWithAutocomplete = async function() {
     const patientId = document.getElementById('selectedPatientId').value;
     if (!patientId) {
@@ -600,7 +660,7 @@ window.getFinancialReportAutocomplete = async () => {
                             <td><strong>${remainingAmountSum} د.أ</strong></td>
                         </tr>
                     </tfoot>
-                </table>
+                \d+
             </div>`;
         } else {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
@@ -627,10 +687,10 @@ window.getFinancialReportAutocomplete = async () => {
     document.getElementById('financeResult').innerHTML = html;
 };
 
-// ===================== بوابات حماية الحذف الشامل (معدلة) =====================
+// ===================== حذف جميع المرضى (للأدمن فقط) =====================
 window.clearAllPatientsData = async () => {
-    if (!currentUser) {
-        alert('⚠️ يجب تسجيل الدخول أولاً');
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
         return;
     }
     
@@ -644,9 +704,10 @@ window.clearAllPatientsData = async () => {
     }
 };
 
+// ===================== حذف جميع الزيارات (للأدمن فقط) =====================
 window.clearAllVisitsData = async () => {
-    if (!currentUser) {
-        alert('⚠️ يجب تسجيل الدخول أولاً');
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
         return;
     }
     
@@ -661,8 +722,13 @@ window.clearAllVisitsData = async () => {
     }
 };
 
-// ===================== محرك تحميل وتصدير ملفات Excel =====================
+// ===================== دوال Excel (للأدمن فقط) =====================
 window.downloadTemplate = function(type) {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
+        return;
+    }
+    
     let headers = [];
     let filename = "";
     if (type === "patients") {
@@ -679,6 +745,11 @@ window.downloadTemplate = function(type) {
 };
 
 window.importPatientsExcel = function() {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
+        return;
+    }
+    
     const fileInput = document.getElementById('excelPatientsFile');
     if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف Excel أولاً"); }
     
@@ -717,6 +788,11 @@ window.importPatientsExcel = function() {
 };
 
 window.importVisitsExcel = async function() {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
+        return;
+    }
+    
     const fileInput = document.getElementById('excelVisitsFile');
     if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف التاريخ الطبي Excel أولاً"); }
     
@@ -786,6 +862,11 @@ window.importVisitsExcel = async function() {
 };
 
 window.exportPatientsToExcel = function() {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
+        return;
+    }
+    
     if (!allPatients.length) return alert("❌ لا توجد بيانات مرضى لتصديرها");
     
     const dataRows = allPatients.map(p => ({
@@ -802,6 +883,11 @@ window.exportPatientsToExcel = function() {
 };
 
 window.exportVisitsToExcel = async function() {
+    if (!isCurrentUserAdmin()) {
+        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
+        return;
+    }
+    
     try {
         const visitsRef = ref(db, 'visits');
         const snapshot = await get(visitsRef);
@@ -831,6 +917,3 @@ window.exportVisitsToExcel = async function() {
         alert("❌ فشل التصدير: " + err.message);
     }
 };
-
-// ===================== تحميل البيانات البدئي =====================
-// تم نقل loadPatientsList() داخل onAuthStateChanged
