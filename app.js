@@ -105,7 +105,6 @@ function applyPermissionsBasedOnRole() {
     // إظهار/إخفاء بطاقة دمج المرضى (للمشرف و reyad)
     const mergeCard = document.getElementById('mergePatientsCard');
     if (mergeCard) {
-        // السماح لكل من admin و reyad برؤية بطاقة الدمج
         if (isAdmin || (currentUser && currentUser.email === "reyad@clinic.com")) {
             mergeCard.style.display = 'block';
         } else {
@@ -320,11 +319,11 @@ function displayPatientsList(searchTerm = '') {
                         <button class="btn btn-sm btn-warning me-1" onclick="window.openEditPatientModal('${p.id}', '${p.name}', '${p.age || ''}', '${p.phone || ''}', '${p.address || ''}')"><i class="fas fa-edit"></i> تعديل</button>
                         <button class="btn btn-sm btn-danger" onclick="window.deletePatient('${p.id}')"><i class="fas fa-trash"></i></button>
                     </td>
-                 </tr>
+                </tr>
             `;
         });
     } else {
-        html += `<tr><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
+        html += `<td><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
     }
     
     html += `</tbody>
@@ -488,8 +487,8 @@ window.clearMergeSelection = function() {
     enableMergeButtonIfReady();
 };
 
+// ===================== الكشف عن المرضى المكررين (كل مجموعة زر منفصل) =====================
 window.findDuplicatePatients = function() {
-    // السماح لكل من admin و reyad
     if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
         alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
         return;
@@ -535,84 +534,85 @@ window.findDuplicatePatients = function() {
     }
     
     let html = '<div class="p-2"><strong>🔍 المرضى المحتمل دمجهم:</strong><ul class="mt-2">';
-    for (const group of duplicates) {
-        html += `<li class="mb-2">
-                    <i class="fas fa-users"></i> مجموعة محتملة: 
-                    ${group.map(p => `<strong>${p.name}</strong> (${p.age || '?'} سنة)${p.phone ? ' 📞' + p.phone : ''}`).join(' ←→ ')}
-                    <br>
-                    <button class="btn btn-xs btn-outline-warning mt-1" onclick="
-                        document.getElementById('mergeMainPatientSearch').value = '${group[0].name.replace(/'/g, "\\'")}';
-                        document.getElementById('mergeMainPatientId').value = '${group[0].id}';
-                        document.getElementById('mergeDuplicatePatientSearch').value = '${group[1].name.replace(/'/g, "\\'")}';
-                        document.getElementById('mergeDuplicatePatientId').value = '${group[1].id}';
-                        window.enableMergeButtonIfReady();
-                        document.getElementById('mergeMainPreview').innerHTML = '<i class=\'fas fa-info-circle\'></i> تم اختيار: <strong>${group[0].name}</strong>';
-                        document.getElementById('mergeDuplicatePreview').innerHTML = '<i class=\'fas fa-exclamation-triangle\'></i> سيتم دمج: <strong>${group[1].name}</strong>';
-                        window.scrollTo({top: document.getElementById(\'mergePatientsCard\').offsetTop - 100, behavior: \'smooth\'});
-                    ">➕ استخدام هذا الاقتراح</button>
+    
+    for (let groupIndex = 0; groupIndex < duplicates.length; groupIndex++) {
+        const group = duplicates[groupIndex];
+        const mainPatient = group[0];
+        const duplicatePatients = group.slice(1);
+        
+        // إنشاء معرف فريد لكل مجموعة
+        const groupId = `group_${groupIndex}_${Date.now()}`;
+        
+        html += `<li class="mb-3 p-2 border rounded" id="${groupId}">
+                    <div class="mb-2">
+                        <i class="fas fa-user-check text-success"></i> <strong>الأصلي:</strong> ${mainPatient.name} (${mainPatient.age || '?'} سنة) ${mainPatient.phone ? '📞 ' + mainPatient.phone : ''}
+                    </div>
+                    <div class="mb-2">
+                        <i class="fas fa-user-times text-danger"></i> <strong>المكررون:</strong> 
+                        ${duplicatePatients.map(p => `${p.name} (${p.age || '?'} سنة)${p.phone ? ' 📞' + p.phone : ''}`).join(' ، ')}
+                    </div>
+                    <button class="btn btn-warning btn-sm" onclick="window.mergeSpecificGroup('${mainPatient.id}', '${mainPatient.name.replace(/'/g, "\\'")}', ${JSON.stringify(duplicatePatients.map(p => ({ id: p.id, name: p.name }))).replace(/"/g, '&quot;')}, this)">
+                        <i class="fas fa-code-branch"></i> دمج هذه المجموعة فقط
+                    </button>
                 </li>`;
     }
     html += '</ul></div>';
     container.innerHTML = html;
 };
 
-window.mergePatients = async function() {
-    // السماح لكل من admin و reyad
+// ===================== دمج مجموعة محددة فقط (وليس كل المجموعات) =====================
+window.mergeSpecificGroup = async function(mainId, mainName, duplicatePatientsArray, buttonElement) {
     if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
         alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
         return;
     }
     
-    const mainId = document.getElementById('mergeMainPatientId').value;
-    const duplicateId = document.getElementById('mergeDuplicatePatientId').value;
-    
-    if (!mainId || !duplicateId) {
-        alert('⚠️ الرجاء اختيار مريضين للدمج');
+    if (!duplicatePatientsArray || duplicatePatientsArray.length === 0) {
+        alert('❌ لا يوجد مرضى مكررين في هذه المجموعة');
         return;
     }
     
-    if (mainId === duplicateId) {
-        alert('⚠️ لا يمكن دمج مريض مع نفسه');
-        return;
-    }
-    
-    const mainPatient = allPatients.find(p => p.id === mainId);
-    const duplicatePatient = allPatients.find(p => p.id === duplicateId);
-    
-    if (!mainPatient || !duplicatePatient) {
-        alert('❌ لم يتم العثور على المرضى');
-        return;
-    }
-    
-    const confirmMsg = `⚠️ هل أنت متأكد من دمج:\n\n"${duplicatePatient.name}" ← إلى ← "${mainPatient.name}"\n\nسيتم:\n✅ نقل جميع الزيارات الخاصة بـ "${duplicatePatient.name}" إلى "${mainPatient.name}"\n✅ حذف المريض "${duplicatePatient.name}" نهائياً\n✅ تحديث جميع التقارير تلقائياً\n\nهذا الإجراء لا يمكن التراجع عنه!`;
+    const confirmMsg = `⚠️ هل أنت متأكد من دمج:\n\n"${duplicatePatientsArray.map(p => p.name).join('", "')}" ← إلى ← "${mainName}"\n\nسيتم:\n✅ نقل جميع الزيارات إلى "${mainName}"\n✅ حذف المرضى المكررين نهائياً\n✅ تحديث جميع التقارير تلقائياً\n\nملاحظة: سيتم دمج هذه المجموعة فقط، وليس جميع المجموعات الأخرى.`;
     
     if (!confirm(confirmMsg)) return;
+    
+    // تعطيل الزر أثناء العملية
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الدمج...';
     
     try {
         const visitsRef = ref(db, 'visits');
         const visitsSnapshot = await get(visitsRef);
         const visits = visitsSnapshot.val();
         
-        let transferCount = 0;
+        let totalTransferCount = 0;
         
-        if (visits) {
-            for (const [visitId, visitData] of Object.entries(visits)) {
-                if (visitData.patientId === duplicateId) {
-                    await update(ref(db, `visits/${visitId}`), {
-                        patientId: mainId,
-                        patientName: mainPatient.name
-                    });
-                    transferCount++;
+        // دمج كل مريض مكرر في هذه المجموعة فقط
+        for (const duplicatePatient of duplicatePatientsArray) {
+            let transferCount = 0;
+            
+            if (visits) {
+                for (const [visitId, visitData] of Object.entries(visits)) {
+                    if (visitData.patientId === duplicatePatient.id) {
+                        await update(ref(db, `visits/${visitId}`), {
+                            patientId: mainId,
+                            patientName: mainName
+                        });
+                        transferCount++;
+                    }
                 }
             }
+            
+            await remove(ref(db, `patients/${duplicatePatient.id}`));
+            totalTransferCount += transferCount;
         }
         
-        await remove(ref(db, `patients/${duplicateId}`));
+        alert(`✅ تم دمج هذه المجموعة بنجاح!\n\nتم نقل ${totalTransferCount} زيارة إلى "${mainName}"\nتم حذف ${duplicatePatientsArray.length} مريض مكرر`);
         
-        alert(`✅ تم الدمج بنجاح!\n\nتم نقل ${transferCount} زيارة من "${duplicatePatient.name}" إلى "${mainPatient.name}"\nتم حذف المريض المكرر "${duplicatePatient.name}"`);
+        // تحديث القائمة (إزالة هذه المجموعة من الاقتراحات)
+        window.findDuplicatePatients();
         
-        window.clearMergeSelection();
-        
+        // تحديث التقارير إذا كانت مفتوحة
         if (document.getElementById('historyResult') && document.getElementById('historyResult').innerHTML !== '') {
             window.searchMedicalHistoryAutocomplete();
         }
@@ -623,6 +623,8 @@ window.mergePatients = async function() {
     } catch (error) {
         console.error(error);
         alert('❌ حدث خطأ أثناء الدمج: ' + error.message);
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = '<i class="fas fa-code-branch"></i> إعادة المحاولة';
     }
 };
 
