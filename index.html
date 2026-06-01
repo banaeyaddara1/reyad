@@ -91,18 +91,51 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 25px;
+            gap: 30px;
             flex-wrap: wrap;
         }
         
         .logo-img {
-            width: 100px;
-            height: 100px;
+            width: 140px;
+            height: 140px;
             object-fit: contain;
             background: white;
-            border-radius: 25px;
-            padding: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            border-radius: 30px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: floatLogo 3s ease-in-out infinite, pulseGlow 2s ease-in-out infinite;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        
+        .logo-img:hover {
+            transform: scale(1.08) rotate(3deg);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.8);
+        }
+        
+        @keyframes floatLogo {
+            0% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+            100% {
+                transform: translateY(0px);
+            }
+        }
+        
+        @keyframes pulseGlow {
+            0% {
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            50% {
+                box-shadow: 0 15px 40px rgba(26,95,122,0.5);
+            }
+            100% {
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
         }
         
         .header-text h1 {
@@ -471,6 +504,12 @@
             background: var(--card-bg);
             color: var(--text-color);
         }
+        
+        .btn-xs {
+            padding: 2px 8px;
+            font-size: 11px;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -493,7 +532,7 @@
                     <i class="fas fa-user-circle"></i> <span id="userNameDisplay"></span>
                 </div>
                 <div class="logo-container">
-                    <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/100?text=Logo'">
+                    <img src="logo.png" alt="شعار صيدلية فراس" class="logo-img" onerror="this.src='https://via.placeholder.com/140?text=Logo'">
                     <div class="header-text">
                         <h1><i class="fas fa-hospital"></i> صيدلية فراس</h1>
                         <p><i class="fas fa-user-md"></i> دكتور: رياض قواريق | نظام إدارة العيادة المتكامل</p>
@@ -560,6 +599,68 @@
                                     <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()">
                                 </div>
                                 <div id="patientsList" class="table-responsive"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- قسم دمج المرضى (للمشرف و reyad) -->
+                        <div class="dashboard-card" id="mergePatientsCard" style="display: none;">
+                            <div class="card-header bg-warning text-dark">
+                                <i class="fas fa-code-branch"></i> دمج المرضى المكررين (توحيد الملفات)
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    <strong>تنبيه:</strong> هذه الأداة مخصصة لدمج المرضى المكررين. اختر المريض <strong>الأصلي</strong> الذي تريد الاحتفاظ به، 
+                                    والمريض <strong>المكرر</strong> الذي سيتم دمجه مع الأول. سيتم نقل جميع الزيارات والبيانات إلى المريض الأصلي، 
+                                    ثم حذف المريض المكرر.
+                                </div>
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold text-success">
+                                            <i class="fas fa-check-circle"></i> المريض الأصلي (الذي سيتم الاحتفاظ به)
+                                        </label>
+                                        <input type="text" id="mergeMainPatientSearch" class="form-control border-success" 
+                                               placeholder="ابحث واختر المريض الأصلي...">
+                                        <input type="hidden" id="mergeMainPatientId">
+                                        <div id="mergeMainPreview" class="small text-success mt-1"></div>
+                                    </div>
+                                    
+                                    <div class="col-md-2 text-center pt-4">
+                                        <i class="fas fa-arrow-right fa-2x mt-3" style="color: var(--nav-active);"></i>
+                                        <i class="fas fa-code-branch fa-2x mt-3"></i>
+                                    </div>
+                                    
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold text-danger">
+                                            <i class="fas fa-ban"></i> المريض المكرر (سيتم دمجه وحذفه)
+                                        </label>
+                                        <input type="text" id="mergeDuplicatePatientSearch" class="form-control border-danger" 
+                                               placeholder="ابحث واختر المريض المكرر...">
+                                        <input type="hidden" id="mergeDuplicatePatientId">
+                                        <div id="mergeDuplicatePreview" class="small text-danger mt-1"></div>
+                                    </div>
+                                    
+                                    <div class="col-md-12 text-center mt-3">
+                                        <button class="btn btn-warning btn-lg" onclick="window.mergePatients()" id="mergeBtn" disabled>
+                                            <i class="fas fa-code-branch"></i> دمج المريض المكرر مع الأصلي
+                                        </button>
+                                        <button class="btn btn-outline-secondary ms-2" onclick="window.clearMergeSelection()">
+                                            <i class="fas fa-eraser"></i> مسح الاختيار
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <hr>
+                                <div class="mt-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-list"></i> عرض جميع المرضى المكررين المحتملين (أسماء متشابهة)
+                                    </label>
+                                    <button class="btn btn-sm btn-info mb-2" onclick="window.findDuplicatePatients()">
+                                        <i class="fas fa-search"></i> كشف الأسماء المتشابهة
+                                    </button>
+                                    <div id="duplicateSuggestionList" class="small border rounded p-2" style="max-height: 200px; overflow-y: auto;"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

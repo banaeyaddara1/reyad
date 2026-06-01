@@ -19,9 +19,10 @@ const auth = getAuth(app);
 
 console.log("✅ Firebase متصل بنجاح");
 
-// ===================== قائمة البريد الإلكتروني للأدمن =====================
+// ===================== قائمة البريد الإلكتروني للأدمن (تم إضافة reyad) =====================
 const ADMIN_EMAILS = [
-    "admin@clinic.com"
+    "admin@clinic.com",
+    "reyad@clinic.com"
 ];
 
 // ===================== متغيرات المصادقة =====================
@@ -52,7 +53,6 @@ onAuthStateChanged(auth, (user) => {
         console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
         console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
         
-        // إظهار عناصر المستخدم المسجل وإخفاء شاشة تسجيل الدخول تماماً وبقوة
         if (loginContainer) loginContainer.style.setProperty('display', 'none', 'important');
         if (appContent) appContent.style.setProperty('display', 'block', 'important');
         if (topButtons) topButtons.style.setProperty('display', 'flex', 'important');
@@ -60,23 +60,18 @@ onAuthStateChanged(auth, (user) => {
         if (tabs) tabs.style.setProperty('display', 'flex', 'important');
         if (tabContent) tabContent.style.setProperty('display', 'block', 'important');
         
-        // عرض اسم المستخدم
         const userNameSpan = document.getElementById('userNameDisplay');
         if (userNameSpan) {
             const displayName = user.email.split('@')[0];
             userNameSpan.textContent = `مرحباً ${displayName}`;
         }
         
-        // تطبيق صلاحيات الأدمن
         applyPermissionsBasedOnRole();
-        
-        // تحميل البيانات
         loadPatientsList();
     } else {
         currentUser = null;
         console.log("❌ لا يوجد مستخدم مسجل الدخول - حظر الواجهة");
         
-        // حظر كامل للواجهة وإظهار شاشة الدخول فقط لا غير
         if (loginContainer) loginContainer.style.setProperty('display', 'flex', 'important');
         if (appContent) appContent.style.setProperty('display', 'none', 'important');
         if (topButtons) topButtons.style.setProperty('display', 'none', 'important');
@@ -106,6 +101,17 @@ function applyPermissionsBasedOnRole() {
             }
         }
     });
+    
+    // إظهار/إخفاء بطاقة دمج المرضى (للمشرف و reyad)
+    const mergeCard = document.getElementById('mergePatientsCard');
+    if (mergeCard) {
+        // السماح لكل من admin و reyad برؤية بطاقة الدمج
+        if (isAdmin || (currentUser && currentUser.email === "reyad@clinic.com")) {
+            mergeCard.style.display = 'block';
+        } else {
+            mergeCard.style.display = 'none';
+        }
+    }
 }
 
 // ===================== حفظ البريد الإلكتروني =====================
@@ -270,6 +276,7 @@ function loadPatientsList() {
         
         displayPatientsList();
         updateAutocomplete();
+        initMergeAutocomplete();
     });
 }
 
@@ -313,14 +320,15 @@ function displayPatientsList(searchTerm = '') {
                         <button class="btn btn-sm btn-warning me-1" onclick="window.openEditPatientModal('${p.id}', '${p.name}', '${p.age || ''}', '${p.phone || ''}', '${p.address || ''}')"><i class="fas fa-edit"></i> تعديل</button>
                         <button class="btn btn-sm btn-danger" onclick="window.deletePatient('${p.id}')"><i class="fas fa-trash"></i></button>
                     </td>
-                </tr>
+                 </tr>
             `;
         });
     } else {
         html += `<tr><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
     }
     
-    html += `</tbody></table>`;
+    html += `</tbody>
+        </table>`;
     document.getElementById('patientsList').innerHTML = html;
 }
 
@@ -361,7 +369,6 @@ window.savePatientEdit = async function() {
             address: address
         });
         
-        // إغلاق المودال برمجياً بشكل سليم تنفيذاً لتعليمات Bootstrap 5
         const modalEl = document.getElementById('editPatientModal');
         const modalInstance = bootstrap.Modal.getInstance(modalEl);
         if (modalInstance) modalInstance.hide();
@@ -409,6 +416,215 @@ function updateAutocomplete() {
         });
     }
 }
+
+// ===================== دوال دمج المرضى =====================
+
+function initMergeAutocomplete() {
+    if (document.getElementById('mergeMainPatientSearch')) {
+        $("#mergeMainPatientSearch").autocomplete({
+            source: patientNamesList,
+            select: function(event, ui) {
+                document.getElementById('mergeMainPatientSearch').value = ui.item.value;
+                document.getElementById('mergeMainPatientId').value = ui.item.id;
+                
+                const patient = allPatients.find(p => p.id === ui.item.id);
+                document.getElementById('mergeMainPreview').innerHTML = `
+                    <i class="fas fa-info-circle"></i> تم اختيار: <strong>${patient?.name}</strong> 
+                    (${patient?.age ? patient.age + ' سنة' : 'عمر غير محدد'}) 
+                    ${patient?.phone ? '📞 ' + patient.phone : ''}
+                `;
+                enableMergeButtonIfReady();
+                return false;
+            }
+        });
+    }
+    
+    if (document.getElementById('mergeDuplicatePatientSearch')) {
+        $("#mergeDuplicatePatientSearch").autocomplete({
+            source: patientNamesList,
+            select: function(event, ui) {
+                document.getElementById('mergeDuplicatePatientSearch').value = ui.item.value;
+                document.getElementById('mergeDuplicatePatientId').value = ui.item.id;
+                
+                const patient = allPatients.find(p => p.id === ui.item.id);
+                document.getElementById('mergeDuplicatePreview').innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> سيتم دمج: <strong>${patient?.name}</strong>
+                    (${patient?.age ? patient.age + ' سنة' : 'عمر غير محدد'}) 
+                    ${patient?.phone ? '📞 ' + patient.phone : ''}
+                `;
+                enableMergeButtonIfReady();
+                return false;
+            }
+        });
+    }
+}
+
+function enableMergeButtonIfReady() {
+    const mainId = document.getElementById('mergeMainPatientId').value;
+    const duplicateId = document.getElementById('mergeDuplicatePatientId').value;
+    const mergeBtn = document.getElementById('mergeBtn');
+    
+    if (mergeBtn) {
+        if (mainId && duplicateId && mainId !== duplicateId) {
+            mergeBtn.disabled = false;
+            mergeBtn.innerHTML = '<i class="fas fa-code-branch"></i> دمج المريض المكرر مع الأصلي';
+        } else if (mainId === duplicateId && mainId) {
+            mergeBtn.disabled = true;
+            mergeBtn.innerHTML = '<i class="fas fa-ban"></i> لا يمكن دمج المريض مع نفسه';
+        } else {
+            mergeBtn.disabled = true;
+            mergeBtn.innerHTML = '<i class="fas fa-code-branch"></i> دمج المريض المكرر مع الأصلي';
+        }
+    }
+}
+
+window.clearMergeSelection = function() {
+    document.getElementById('mergeMainPatientSearch').value = '';
+    document.getElementById('mergeMainPatientId').value = '';
+    document.getElementById('mergeDuplicatePatientSearch').value = '';
+    document.getElementById('mergeDuplicatePatientId').value = '';
+    document.getElementById('mergeMainPreview').innerHTML = '';
+    document.getElementById('mergeDuplicatePreview').innerHTML = '';
+    enableMergeButtonIfReady();
+};
+
+window.findDuplicatePatients = function() {
+    // السماح لكل من admin و reyad
+    if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
+        alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
+        return;
+    }
+    
+    const duplicates = [];
+    const processed = new Set();
+    
+    for (let i = 0; i < allPatients.length; i++) {
+        const p1 = allPatients[i];
+        if (processed.has(p1.id)) continue;
+        
+        const similar = [p1];
+        
+        for (let j = i + 1; j < allPatients.length; j++) {
+            const p2 = allPatients[j];
+            if (processed.has(p2.id)) continue;
+            
+            const name1 = p1.name?.trim().toLowerCase().replace(/\s+/g, ' ');
+            const name2 = p2.name?.trim().toLowerCase().replace(/\s+/g, ' ');
+            
+            if (name1 === name2 || 
+                (name1 && name2 && (name1.includes(name2) || name2.includes(name1)))) {
+                similar.push(p2);
+                processed.add(p2.id);
+            }
+            else if (p1.phone && p2.phone && p1.phone === p2.phone && p1.phone !== '') {
+                similar.push(p2);
+                processed.add(p2.id);
+            }
+        }
+        
+        if (similar.length > 1) {
+            duplicates.push(similar);
+        }
+        processed.add(p1.id);
+    }
+    
+    const container = document.getElementById('duplicateSuggestionList');
+    if (duplicates.length === 0) {
+        container.innerHTML = '<div class="text-success p-2"><i class="fas fa-check-circle"></i> لا توجد أسماء مكررة أو متشابهة حالياً.</div>';
+        return;
+    }
+    
+    let html = '<div class="p-2"><strong>🔍 المرضى المحتمل دمجهم:</strong><ul class="mt-2">';
+    for (const group of duplicates) {
+        html += `<li class="mb-2">
+                    <i class="fas fa-users"></i> مجموعة محتملة: 
+                    ${group.map(p => `<strong>${p.name}</strong> (${p.age || '?'} سنة)${p.phone ? ' 📞' + p.phone : ''}`).join(' ←→ ')}
+                    <br>
+                    <button class="btn btn-xs btn-outline-warning mt-1" onclick="
+                        document.getElementById('mergeMainPatientSearch').value = '${group[0].name.replace(/'/g, "\\'")}';
+                        document.getElementById('mergeMainPatientId').value = '${group[0].id}';
+                        document.getElementById('mergeDuplicatePatientSearch').value = '${group[1].name.replace(/'/g, "\\'")}';
+                        document.getElementById('mergeDuplicatePatientId').value = '${group[1].id}';
+                        window.enableMergeButtonIfReady();
+                        document.getElementById('mergeMainPreview').innerHTML = '<i class=\'fas fa-info-circle\'></i> تم اختيار: <strong>${group[0].name}</strong>';
+                        document.getElementById('mergeDuplicatePreview').innerHTML = '<i class=\'fas fa-exclamation-triangle\'></i> سيتم دمج: <strong>${group[1].name}</strong>';
+                        window.scrollTo({top: document.getElementById(\'mergePatientsCard\').offsetTop - 100, behavior: \'smooth\'});
+                    ">➕ استخدام هذا الاقتراح</button>
+                </li>`;
+    }
+    html += '</ul></div>';
+    container.innerHTML = html;
+};
+
+window.mergePatients = async function() {
+    // السماح لكل من admin و reyad
+    if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
+        alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
+        return;
+    }
+    
+    const mainId = document.getElementById('mergeMainPatientId').value;
+    const duplicateId = document.getElementById('mergeDuplicatePatientId').value;
+    
+    if (!mainId || !duplicateId) {
+        alert('⚠️ الرجاء اختيار مريضين للدمج');
+        return;
+    }
+    
+    if (mainId === duplicateId) {
+        alert('⚠️ لا يمكن دمج مريض مع نفسه');
+        return;
+    }
+    
+    const mainPatient = allPatients.find(p => p.id === mainId);
+    const duplicatePatient = allPatients.find(p => p.id === duplicateId);
+    
+    if (!mainPatient || !duplicatePatient) {
+        alert('❌ لم يتم العثور على المرضى');
+        return;
+    }
+    
+    const confirmMsg = `⚠️ هل أنت متأكد من دمج:\n\n"${duplicatePatient.name}" ← إلى ← "${mainPatient.name}"\n\nسيتم:\n✅ نقل جميع الزيارات الخاصة بـ "${duplicatePatient.name}" إلى "${mainPatient.name}"\n✅ حذف المريض "${duplicatePatient.name}" نهائياً\n✅ تحديث جميع التقارير تلقائياً\n\nهذا الإجراء لا يمكن التراجع عنه!`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+        const visitsRef = ref(db, 'visits');
+        const visitsSnapshot = await get(visitsRef);
+        const visits = visitsSnapshot.val();
+        
+        let transferCount = 0;
+        
+        if (visits) {
+            for (const [visitId, visitData] of Object.entries(visits)) {
+                if (visitData.patientId === duplicateId) {
+                    await update(ref(db, `visits/${visitId}`), {
+                        patientId: mainId,
+                        patientName: mainPatient.name
+                    });
+                    transferCount++;
+                }
+            }
+        }
+        
+        await remove(ref(db, `patients/${duplicateId}`));
+        
+        alert(`✅ تم الدمج بنجاح!\n\nتم نقل ${transferCount} زيارة من "${duplicatePatient.name}" إلى "${mainPatient.name}"\nتم حذف المريض المكرر "${duplicatePatient.name}"`);
+        
+        window.clearMergeSelection();
+        
+        if (document.getElementById('historyResult') && document.getElementById('historyResult').innerHTML !== '') {
+            window.searchMedicalHistoryAutocomplete();
+        }
+        if (document.getElementById('financeResult') && document.getElementById('financeResult').innerHTML !== '') {
+            window.getFinancialReportAutocomplete();
+        }
+        
+    } catch (error) {
+        console.error(error);
+        alert('❌ حدث خطأ أثناء الدمج: ' + error.message);
+    }
+};
 
 // ===================== إضافة مريض جديد =====================
 window.addPatient = async function() {
@@ -639,7 +855,6 @@ window.getFinancialReportAutocomplete = async () => {
     
     if (patientId || patientName) {
         if (filteredVisits.length > 0) {
-            // جلب البيانات التعريفية الكاملة للمريض من القائمة المحلية المحدثة
             const targetId = patientId || filteredVisits[0].patientId;
             const patientObj = allPatients.find(p => p.id === targetId) || {
                 name: filteredVisits[0].patientName,
