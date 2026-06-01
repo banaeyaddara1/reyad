@@ -19,7 +19,7 @@ const auth = getAuth(app);
 
 console.log("✅ Firebase متصل بنجاح");
 
-// ===================== قائمة البريد الإلكتروني للأدمن (تم إضافة reyad) =====================
+// ===================== قائمة البريد الإلكتروني للأدمن =====================
 const ADMIN_EMAILS = [
     "admin@clinic.com",
     "reyad@clinic.com"
@@ -102,7 +102,6 @@ function applyPermissionsBasedOnRole() {
         }
     });
     
-    // إظهار/إخفاء بطاقة دمج المرضى (للمشرف و reyad)
     const mergeCard = document.getElementById('mergePatientsCard');
     if (mergeCard) {
         if (isAdmin || (currentUser && currentUser.email === "reyad@clinic.com")) {
@@ -323,7 +322,7 @@ function displayPatientsList(searchTerm = '') {
             `;
         });
     } else {
-        html += `<td><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
+        html += `<tr><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
     }
     
     html += `</tbody>
@@ -487,7 +486,7 @@ window.clearMergeSelection = function() {
     enableMergeButtonIfReady();
 };
 
-// ===================== الكشف عن المرضى المكررين (كل مجموعة زر منفصل) =====================
+// ===================== الكشف عن المرضى المكررين (مع اختيار الاسم الأساسي) =====================
 window.findDuplicatePatients = function() {
     if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
         alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
@@ -537,22 +536,29 @@ window.findDuplicatePatients = function() {
     
     for (let groupIndex = 0; groupIndex < duplicates.length; groupIndex++) {
         const group = duplicates[groupIndex];
-        const mainPatient = group[0];
-        const duplicatePatients = group.slice(1);
         
-        // إنشاء معرف فريد لكل مجموعة
-        const groupId = `group_${groupIndex}_${Date.now()}`;
-        
-        html += `<li class="mb-3 p-2 border rounded" id="${groupId}">
+        html += `<li class="mb-3 p-2 border rounded">
                     <div class="mb-2">
-                        <i class="fas fa-user-check text-success"></i> <strong>الأصلي:</strong> ${mainPatient.name} (${mainPatient.age || '?'} سنة) ${mainPatient.phone ? '📞 ' + mainPatient.phone : ''}
+                        <i class="fas fa-users text-primary"></i> <strong>المجموعة ${groupIndex + 1}:</strong>
                     </div>
-                    <div class="mb-2">
-                        <i class="fas fa-user-times text-danger"></i> <strong>المكررون:</strong> 
-                        ${duplicatePatients.map(p => `${p.name} (${p.age || '?'} سنة)${p.phone ? ' 📞' + p.phone : ''}`).join(' ، ')}
+                    <div class="row g-2 mb-2">
+                        ${group.map(p => `
+                            <div class="col-md-4 col-sm-6">
+                                <div class="card p-2 ${p.id === group[0].id ? 'border-success bg-success bg-opacity-10' : 'border-secondary'}">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="group_${groupIndex}" value="${p.id}" id="radio_${p.id}" ${p.id === group[0].id ? 'checked' : ''}>
+                                        <label class="form-check-label" for="radio_${p.id}">
+                                            <strong>${p.name}</strong><br>
+                                            <small>العمر: ${p.age || '?'} سنة</small><br>
+                                            <small>${p.phone ? '📞 ' + p.phone : ''}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <button class="btn btn-warning btn-sm" onclick="window.mergeSpecificGroup('${mainPatient.id}', '${mainPatient.name.replace(/'/g, "\\'")}', ${JSON.stringify(duplicatePatients.map(p => ({ id: p.id, name: p.name }))).replace(/"/g, '&quot;')}, this)">
-                        <i class="fas fa-code-branch"></i> دمج هذه المجموعة فقط
+                    <button class="btn btn-warning btn-sm mt-2" onclick="window.mergeSelectedFromGroup(${groupIndex}, ${JSON.stringify(group.map(p => ({ id: p.id, name: p.name }))).replace(/"/g, '&quot;')}, this)">
+                        <i class="fas fa-code-branch"></i> دمج المختارين مع الأساسي
                     </button>
                 </li>`;
     }
@@ -560,19 +566,30 @@ window.findDuplicatePatients = function() {
     container.innerHTML = html;
 };
 
-// ===================== دمج مجموعة محددة فقط (وليس كل المجموعات) =====================
-window.mergeSpecificGroup = async function(mainId, mainName, duplicatePatientsArray, buttonElement) {
+// ===================== دمج المجموعة مع اختيار الاسم الأساسي =====================
+window.mergeSelectedFromGroup = async function(groupIndex, groupArray, buttonElement) {
     if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
         alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
         return;
     }
     
-    if (!duplicatePatientsArray || duplicatePatientsArray.length === 0) {
+    // الحصول على الاسم المختار من الراديو
+    const selectedRadio = document.querySelector(`input[name="group_${groupIndex}"]:checked`);
+    if (!selectedRadio) {
+        alert('⚠️ الرجاء اختيار الاسم الذي تريد اعتماده كأساس');
+        return;
+    }
+    
+    const mainId = selectedRadio.value;
+    const mainPatient = groupArray.find(p => p.id === mainId);
+    const duplicatePatients = groupArray.filter(p => p.id !== mainId);
+    
+    if (duplicatePatients.length === 0) {
         alert('❌ لا يوجد مرضى مكررين في هذه المجموعة');
         return;
     }
     
-    const confirmMsg = `⚠️ هل أنت متأكد من دمج:\n\n"${duplicatePatientsArray.map(p => p.name).join('", "')}" ← إلى ← "${mainName}"\n\nسيتم:\n✅ نقل جميع الزيارات إلى "${mainName}"\n✅ حذف المرضى المكررين نهائياً\n✅ تحديث جميع التقارير تلقائياً\n\nملاحظة: سيتم دمج هذه المجموعة فقط، وليس جميع المجموعات الأخرى.`;
+    const confirmMsg = `⚠️ هل أنت متأكد من دمج:\n\n"${duplicatePatients.map(p => p.name).join('", "')}"\n\n← إلى ←\n\n"${mainPatient.name}"\n\nسيتم:\n✅ نقل جميع الزيارات إلى "${mainPatient.name}"\n✅ حذف المرضى المكررين نهائياً\n✅ تحديث جميع التقارير تلقائياً\n\nملاحظة: سيتم دمج هذه المجموعة فقط، وليس جميع المجموعات الأخرى.`;
     
     if (!confirm(confirmMsg)) return;
     
@@ -587,8 +604,7 @@ window.mergeSpecificGroup = async function(mainId, mainName, duplicatePatientsAr
         
         let totalTransferCount = 0;
         
-        // دمج كل مريض مكرر في هذه المجموعة فقط
-        for (const duplicatePatient of duplicatePatientsArray) {
+        for (const duplicatePatient of duplicatePatients) {
             let transferCount = 0;
             
             if (visits) {
@@ -596,7 +612,7 @@ window.mergeSpecificGroup = async function(mainId, mainName, duplicatePatientsAr
                     if (visitData.patientId === duplicatePatient.id) {
                         await update(ref(db, `visits/${visitId}`), {
                             patientId: mainId,
-                            patientName: mainName
+                            patientName: mainPatient.name
                         });
                         transferCount++;
                     }
@@ -607,12 +623,10 @@ window.mergeSpecificGroup = async function(mainId, mainName, duplicatePatientsAr
             totalTransferCount += transferCount;
         }
         
-        alert(`✅ تم دمج هذه المجموعة بنجاح!\n\nتم نقل ${totalTransferCount} زيارة إلى "${mainName}"\nتم حذف ${duplicatePatientsArray.length} مريض مكرر`);
+        alert(`✅ تم دمج هذه المجموعة بنجاح!\n\nتم نقل ${totalTransferCount} زيارة إلى "${mainPatient.name}"\nتم حذف ${duplicatePatients.length} مريض مكرر`);
         
-        // تحديث القائمة (إزالة هذه المجموعة من الاقتراحات)
         window.findDuplicatePatients();
         
-        // تحديث التقارير إذا كانت مفتوحة
         if (document.getElementById('historyResult') && document.getElementById('historyResult').innerHTML !== '') {
             window.searchMedicalHistoryAutocomplete();
         }
@@ -729,7 +743,7 @@ window.addVisitWithAutocomplete = async function() {
     }
 };
 
-// ===================== البحث في التاريخ الطبي =====================
+// ===================== البحث في التاريخ الطبي (مع تحسين عرض النصوص والألوان) =====================
 window.searchMedicalHistoryAutocomplete = async () => {
     const patientId = document.getElementById('historySelectedPatientId').value;
     if (!patientId) {
@@ -749,8 +763,8 @@ window.searchMedicalHistoryAutocomplete = async () => {
             const v = visits[key];
             if (patientId === v.patientId) {
                 found = true;
-                const remainingClass = v.remainingAmount < 0 ? 'text-danger' : 'text-success';
-                html += `<div class="accordion-item">
+                const remainingClass = v.remainingAmount < 0 ? 'text-danger bg-danger bg-opacity-10 p-1 rounded' : 'text-success bg-success bg-opacity-10 p-1 rounded';
+                html += `<div class="accordion-item mb-2">
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${key}">
                             🩺 ${v.patientName} - ${v.date} - إجمالي: ${v.totalAmount || 0} د.أ
@@ -758,16 +772,16 @@ window.searchMedicalHistoryAutocomplete = async () => {
                     </h2>
                     <div id="collapse${key}" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
                         <div class="accordion-body">
-                            <p><strong><i class="fas fa-stethoscope"></i> التشخيص:</strong> ${v.diagnosis || '-'}</p>
-                            <p><strong><i class="fas fa-pills"></i> العلاج:</strong> ${v.treatment || '-'}</p>
+                            <p><strong><i class="fas fa-stethoscope"></i> التشخيص:</strong> <span style="white-space: normal; word-wrap: break-word; display: inline-block;">${v.diagnosis || '-'}</span></p>
+                            <p><strong><i class="fas fa-pills"></i> العلاج:</strong> <span style="white-space: normal; word-wrap: break-word; display: inline-block;">${v.treatment || '-'}</span></p>
                             <p><strong><i class="fas fa-boxes"></i> عدد العلب:</strong> ${v.boxesCount || 0}</p>
-                            <div class="payment-details">
-                                <p><strong><i class="fas fa-dollar-sign"></i> المبلغ الكامل:</strong> ${v.totalAmount || 0} د.أ</p>
-                                <p><strong><i class="fas fa-money-bill"></i> المبلغ المدفوع:</strong> ${v.paidAmount || 0} د.أ</p>
-                                <p><strong><i class="fas fa-credit-card"></i> المبلغ المتبقي:</strong> <span class="${remainingClass}">${v.remainingAmount || 0} د.أ</span></p>
+                            <div class="payment-details" style="background: var(--border-color); border-radius: 10px; padding: 12px;">
+                                <p><strong><i class="fas fa-dollar-sign" style="color: #0d6efd;"></i> المبلغ الكامل:</strong> <span class="fw-bold text-primary">${v.totalAmount || 0} د.أ</span></p>
+                                <p><strong><i class="fas fa-money-bill" style="color: #198754;"></i> المبلغ المدفوع:</strong> <span class="fw-bold text-success">${v.paidAmount || 0} د.أ</span></p>
+                                <p><strong><i class="fas fa-credit-card" style="color: ${v.remainingAmount < 0 ? '#dc3545' : '#198754'};"></i> المبلغ المتبقي:</strong> <span class="fw-bold ${v.remainingAmount < 0 ? 'text-danger' : 'text-success'}">${v.remainingAmount || 0} د.أ</span></p>
                             </div>
                             <p><strong><i class="fas fa-clock"></i> الوقت:</strong> ${v.time || '-'}</p>
-                            <button class="btn btn-sm btn-danger" onclick="window.deleteVisit('${key}')"><i class="fas fa-trash"></i> حذف الزيارة</button>
+                            <button class="btn btn-sm btn-danger mt-2" onclick="window.deleteVisit('${key}')"><i class="fas fa-trash"></i> حذف الزيارة</button>
                         </div>
                     </div>
                 </div>`;
@@ -887,8 +901,8 @@ window.getFinancialReportAutocomplete = async () => {
                 const remainingClass = v.remainingAmount < 0 ? 'text-danger' : 'text-success';
                 html += `<tr>
                     <td>${v.date || '-'}</td>
-                    <td>${v.diagnosis || '-'}</td>
-                    <td>${v.treatment || '-'}</td>
+                    <td style="white-space: normal; word-wrap: break-word; max-width: 200px;">${v.diagnosis || '-'}</td>
+                    <td style="white-space: normal; word-wrap: break-word; max-width: 200px;">${v.treatment || '-'}</td>
                     <td>${v.boxesCount || 0}</td>
                     <td class="text-primary fw-bold">${v.totalAmount || 0}</td>
                     <td class="text-success fw-bold">${v.paidAmount || 0}</td>
@@ -903,7 +917,7 @@ window.getFinancialReportAutocomplete = async () => {
                         <td><strong>${paidAmountSum} د.أ</strong></td>
                         <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
                     </tr></tfoot>
-                </table>
+                \dStack
                     </div>
                 </div>`;
         } else {
