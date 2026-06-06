@@ -115,27 +115,15 @@
         }
         
         @keyframes floatLogo {
-            0% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-10px);
-            }
-            100% {
-                transform: translateY(0px);
-            }
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
         }
         
         @keyframes pulseGlow {
-            0% {
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            }
-            50% {
-                box-shadow: 0 15px 40px rgba(26,95,122,0.5);
-            }
-            100% {
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            }
+            0% { box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 15px 40px rgba(26,95,122,0.5); }
+            100% { box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         }
         
         .header-text h1 {
@@ -272,18 +260,14 @@
             transition: all 0.3s; 
         }
         
-        .btn-danger:hover { 
-            transform: scale(1.05); 
-        }
+        .btn-danger:hover { transform: scale(1.05); }
         
         .btn-warning {
             border-radius: 10px;
             transition: all 0.3s;
         }
         
-        .btn-warning:hover {
-            transform: scale(1.05);
-        }
+        .btn-warning:hover { transform: scale(1.05); }
         
         .table-responsive { 
             overflow-x: auto;
@@ -312,9 +296,7 @@
             white-space: nowrap;
         }
         
-        .table tbody tr:hover { 
-            background: var(--border-color); 
-        }
+        .table tbody tr:hover { background: var(--border-color); }
         
         .search-box { 
             background: var(--border-color); 
@@ -336,7 +318,6 @@
             color: white; 
             border-radius: 25px; 
             padding: 30px; 
-            text-align: center;
             margin-top: 20px;
         }
         
@@ -427,9 +408,7 @@
             color: #000; 
         }
         
-        .admin-only {
-            display: none !important;
-        }
+        .admin-only { display: none !important; }
         
         .save-email-btn {
             position: absolute;
@@ -442,15 +421,8 @@
             cursor: pointer;
         }
         
-        .remaining-negative {
-            color: #dc3545;
-            font-weight: bold;
-        }
-        
-        .remaining-positive {
-            color: #28a745;
-            font-weight: bold;
-        }
+        .remaining-negative { color: #dc3545; font-weight: bold; }
+        .remaining-positive { color: #28a745; font-weight: bold; }
         
         .login-container {
             display: flex;
@@ -496,20 +468,9 @@
             color: white;
         }
         
-        .patient-info-card i {
-            margin-left: 10px;
-        }
-        
-        .modal-content {
-            background: var(--card-bg);
-            color: var(--text-color);
-        }
-        
-        .btn-xs {
-            padding: 2px 8px;
-            font-size: 11px;
-            border-radius: 10px;
-        }
+        .patient-info-card i { margin-left: 10px; }
+        .modal-content { background: var(--card-bg); color: var(--text-color); }
+        .btn-xs { padding: 2px 8px; font-size: 11px; border-radius: 10px; }
     </style>
 </head>
 <body class="dark-mode">
@@ -566,10 +527,10 @@
 
             <div id="appContent" style="display: none;">
                 <ul class="nav nav-tabs" id="mainTab" role="tablist">
-                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
+                    <li class="nav-item"><button class="nav-link active" id="patients-tab" data-bs-toggle="tab" data-bs-target="#patients"><i class="fas fa-users"></i> المرضى</button></li>
+                    <li class="nav-item"><button class="nav-link" id="visits-tab" data-bs-toggle="tab" data-bs-target="#visits"><i class="fas fa-notes-medical"></i> إدخال زيارة</button></li>
+                    <li class="nav-item"><button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
+                    <li class="nav-item"><button class="nav-link" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
                     <li class="nav-item admin-only" id="importTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelImportTab"><i class="fas fa-file-upload"></i> استيراد البيانات (Excel)</button></li>
                     <li class="nav-item admin-only" id="exportTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-file-download"></i> تصدير البيانات</button></li>
                 </ul>
@@ -596,13 +557,12 @@
                             <div class="card-body">
                                 <div class="search-box d-flex align-items-center gap-2">
                                     <i class="fas fa-search"></i> 
-                                    <input type="text" id="searchPatient" class="form-control" placeholder="بحث باسم المريض..." onkeyup="filterPatients()">
+                                    <input type="text" id="searchPatient" class="form-control" placeholder="بحث بالاسم، رقم الجوال أو العنوان..." onkeyup="filterPatients()">
                                 </div>
                                 <div id="patientsList" class="table-responsive"></div>
                             </div>
                         </div>
                         
-                        <!-- قسم دمج المرضى (للمشرف و reyad) -->
                         <div class="dashboard-card" id="mergePatientsCard" style="display: none;">
                             <div class="card-header bg-warning text-dark">
                                 <i class="fas fa-code-branch"></i> دمج المرضى المكررين (توحيد الملفات)
@@ -610,33 +570,24 @@
                             <div class="card-body">
                                 <div class="alert alert-warning">
                                     <i class="fas fa-exclamation-triangle"></i> 
-                                    <strong>تنبيه:</strong> هذه الأداة مخصصة لدمج المرضى المكررين. اختر المريض <strong>الأصلي</strong> الذي تريد الاحتفاظ به، 
-                                    والمريض <strong>المكرر</strong> الذي سيتم دمجه مع الأول. سيتم نقل جميع الزيارات والبيانات إلى المريض الأصلي، 
-                                    ثم حذف المريض المكرر.
+                                    <strong>تنبيه:</strong> هذه الأداة مخصصة لدمج المرضى المكررين.
                                 </div>
                                 
                                 <div class="row g-3">
                                     <div class="col-md-5">
-                                        <label class="form-label fw-bold text-success">
-                                            <i class="fas fa-check-circle"></i> المريض الأصلي (الذي سيتم الاحتفاظ به)
-                                        </label>
-                                        <input type="text" id="mergeMainPatientSearch" class="form-control border-success" 
-                                               placeholder="ابحث واختر المريض الأصلي...">
+                                        <label class="form-label fw-bold text-success"><i class="fas fa-check-circle"></i> المريض الأصلي</label>
+                                        <input type="text" id="mergeMainPatientSearch" class="form-control border-success" placeholder="ابحث واختر المريض الأصلي...">
                                         <input type="hidden" id="mergeMainPatientId">
                                         <div id="mergeMainPreview" class="small text-success mt-1"></div>
                                     </div>
                                     
                                     <div class="col-md-2 text-center pt-4">
                                         <i class="fas fa-arrow-right fa-2x mt-3" style="color: var(--nav-active);"></i>
-                                        <i class="fas fa-code-branch fa-2x mt-3"></i>
                                     </div>
                                     
                                     <div class="col-md-5">
-                                        <label class="form-label fw-bold text-danger">
-                                            <i class="fas fa-ban"></i> المريض المكرر (سيتم دمجه وحذفه)
-                                        </label>
-                                        <input type="text" id="mergeDuplicatePatientSearch" class="form-control border-danger" 
-                                               placeholder="ابحث واختر المريض المكرر...">
+                                        <label class="form-label fw-bold text-danger"><i class="fas fa-ban"></i> المريض المكرر</label>
+                                        <input type="text" id="mergeDuplicatePatientSearch" class="form-control border-danger" placeholder="ابحث واختر المريض المكرر...">
                                         <input type="hidden" id="mergeDuplicatePatientId">
                                         <div id="mergeDuplicatePreview" class="small text-danger mt-1"></div>
                                     </div>
@@ -653,12 +604,8 @@
                                 
                                 <hr>
                                 <div class="mt-3">
-                                    <label class="form-label fw-bold">
-                                        <i class="fas fa-list"></i> عرض جميع المرضى المكررين المحتملين (أسماء متشابهة)
-                                    </label>
-                                    <button class="btn btn-sm btn-info mb-2" onclick="window.findDuplicatePatients()">
-                                        <i class="fas fa-search"></i> كشف الأسماء المتشابهة
-                                    </button>
+                                    <label class="form-label fw-bold"><i class="fas fa-list"></i> عرض جميع المرضى المكررين المحتملين</label>
+                                    <button class="btn btn-sm btn-info mb-2" onclick="window.findDuplicatePatients()"><i class="fas fa-search"></i> كشف الأسماء المتشابهة</button>
                                     <div id="duplicateSuggestionList" class="small border rounded p-2" style="max-height: 200px; overflow-y: auto;"></div>
                                 </div>
                             </div>
@@ -741,7 +688,6 @@
                                 <div class="dashboard-card">
                                     <div class="card-header"><i class="fas fa-users"></i> استيراد ملف المرضى</div>
                                     <div class="card-body text-center">
-                                        <p class="text-muted small">قم بتحميل القالب الخاص بالمرضى، املأ البيانات ثم قم برفع الملف هنا.</p>
                                         <button class="btn btn-sm btn-secondary mb-3" onclick="window.downloadTemplate('patients')"><i class="fas fa-download"></i> تحميل قالب ملف المرضى فارغ</button>
                                         <input type="file" id="excelPatientsFile" class="form-control mb-3" accept=".xlsx, .xls">
                                         <button class="btn btn-success w-100" onclick="window.importPatientsExcel()"><i class="fas fa-upload"></i> رفع واستيراد المرضى</button>
@@ -752,7 +698,6 @@
                                 <div class="dashboard-card">
                                     <div class="card-header"><i class="fas fa-history"></i> استيراد ملف التاريخ الطبي (الزيارات)</div>
                                     <div class="card-body text-center">
-                                        <p class="text-muted small">تنبيه: يجب أن تتطابق أسماء المرضى في ملف الزيارات مع الأسماء المسجلة بالبرنامج لربط البيانات بشكل صحيح.</p>
                                         <button class="btn btn-sm btn-secondary mb-3" onclick="window.downloadTemplate('visits')"><i class="fas fa-download"></i> تحميل قالب ملف الزيارات فارغ</button>
                                         <input type="file" id="excelVisitsFile" class="form-control mb-3" accept=".xlsx, .xls">
                                         <button class="btn btn-success w-100" onclick="window.importVisitsExcel()"><i class="fas fa-upload"></i> رفع واستيراد التاريخ الطبي</button>
@@ -766,7 +711,6 @@
                         <div class="dashboard-card">
                             <div class="card-header"><i class="fas fa-file-download"></i> تحميل وتنزيل بيانات النظام الحالية لـ Excel</div>
                             <div class="card-body text-center py-4">
-                                <p class="mb-4">يمكنك تصدير كافة الجداول المخزنة حالياً في السحابة لاستعمالها محلياً أو للاحتفاظ بنسخة احتياطية.</p>
                                 <div class="d-flex justify-content-center gap-3 flex-wrap">
                                     <button class="btn btn-primary btn-lg" onclick="window.exportPatientsToExcel()"><i class="fas fa-file-excel"></i> تنزيل صفحة المرضى كاملة</button>
                                     <button class="btn btn-success btn-lg" onclick="window.exportVisitsToExcel()"><i class="fas fa-file-prescription"></i> تنزيل التاريخ الطبي كامل</button>
@@ -782,6 +726,7 @@
         </footer>
     </div>
 
+    <!-- Modals -->
     <div class="modal fade" id="editPatientModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -791,22 +736,10 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="editPatientId">
-                    <div class="mb-3">
-                        <label class="form-label">الاسم الكامل</label>
-                        <input type="text" id="editPatientName" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">العمر</label>
-                        <input type="number" id="editPatientAge" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">رقم الجوال</label>
-                        <input type="tel" id="editPatientPhone" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">العنوان</label>
-                        <input type="text" id="editPatientAddress" class="form-control">
-                    </div>
+                    <div class="mb-3"><label class="form-label">الاسم الكامل</label><input type="text" id="editPatientName" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">العمر</label><input type="number" id="editPatientAge" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">رقم الجوال</label><input type="tel" id="editPatientPhone" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label">العنوان</label><input type="text" id="editPatientAddress" class="form-control"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -818,7 +751,7 @@
 
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content settings-modal">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-cog"></i> إعدادات النظام - لوحة الأدمن</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -827,15 +760,10 @@
                     <h6><i class="fas fa-user-plus"></i> إنشاء حساب جديد</h6>
                     <div class="mb-2">
                         <input type="email" id="newUserEmail" class="form-control mb-2" placeholder="البريد الإلكتروني للمستخدم الجديد">
-                        <input type="password" id="newUserPassword" class="form-control mb-2" placeholder="كلمة المرور (6 أحرف على الأقل)">
-                        <button class="btn btn-success w-100" onclick="window.createNewUserByAdmin()">
-                            <i class="fas fa-user-plus"></i> إنشاء حساب
-                        </button>
+                        <input type="password" id="newUserPassword" class="form-control mb-2" placeholder="كلمة المرور">
+                        <button class="btn btn-success w-100" onclick="window.createNewUserByAdmin()">أنشئ حساب</button>
                     </div>
                     <div id="createUserMessage" class="text-success small text-center"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                 </div>
             </div>
         </div>
@@ -851,20 +779,16 @@
         function toggleMode() {
             document.body.classList.toggle('dark-mode');
             const btn = document.getElementById('modeToggle');
-            if (document.body.classList.contains('dark-mode')) {
-                btn.innerHTML = '<i class="fas fa-sun"></i>';
-            } else {
-                btn.innerHTML = '<i class="fas fa-moon"></i>';
-            }
+            btn.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         }
         
         function calculateRemaining() {
             const total = parseFloat(document.getElementById('totalAmount').value) || 0;
             const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
             const remaining = total - paid;
-            document.getElementById('remainingAmount').value = remaining;
-            
             const remainingField = document.getElementById('remainingAmount');
+            remainingField.value = remaining;
+            
             if (remaining < 0) {
                 remainingField.classList.add('remaining-negative');
                 remainingField.classList.remove('remaining-positive');

@@ -19,20 +19,15 @@ const auth = getAuth(app);
 
 console.log("✅ Firebase متصل بنجاح");
 
-// ===================== قائمة البريد الإلكتروني للأدمن =====================
 const ADMIN_EMAILS = [
     "admin@clinic.com",
     "reyad@clinic.com"
 ];
 
-// ===================== متغيرات المصادقة =====================
 let currentUser = null;
-
-// ===================== المتغيرات العامة =====================
 let allPatients = [];
 let patientNamesList = [];
 
-// ===================== دالة التحقق من صلاحية الأدمن =====================
 function isCurrentUserAdmin() {
     return currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim());
 }
@@ -50,9 +45,6 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         const isAdmin = isCurrentUserAdmin();
         
-        console.log(`✅ مستخدم مسجل الدخول: ${user.email}`);
-        console.log(`👑 صلاحية الأدمن: ${isAdmin ? "نعم" : "لا"}`);
-        
         if (loginContainer) loginContainer.style.setProperty('display', 'none', 'important');
         if (appContent) appContent.style.setProperty('display', 'block', 'important');
         if (topButtons) topButtons.style.setProperty('display', 'flex', 'important');
@@ -62,16 +54,13 @@ onAuthStateChanged(auth, (user) => {
         
         const userNameSpan = document.getElementById('userNameDisplay');
         if (userNameSpan) {
-            const displayName = user.email.split('@')[0];
-            userNameSpan.textContent = `مرحباً ${displayName}`;
+            userNameSpan.textContent = `مرحباً ${user.email.split('@')[0]}`;
         }
         
         applyPermissionsBasedOnRole();
         loadPatientsList();
     } else {
         currentUser = null;
-        console.log("❌ لا يوجد مستخدم مسجل الدخول - حظر الواجهة");
-        
         if (loginContainer) loginContainer.style.setProperty('display', 'flex', 'important');
         if (appContent) appContent.style.setProperty('display', 'none', 'important');
         if (topButtons) topButtons.style.setProperty('display', 'none', 'important');
@@ -81,56 +70,31 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// ===================== تطبيق الصلاحيات حسب دور المستخدم =====================
 function applyPermissionsBasedOnRole() {
     const isAdmin = isCurrentUserAdmin();
-    const adminOnlyElements = document.querySelectorAll('.admin-only');
-    
-    adminOnlyElements.forEach(el => {
-        if (isAdmin) {
-            el.style.setProperty('display', '', 'important');
-            if (el.classList.contains('nav-link')) {
-                const parentItem = el.closest('.nav-item');
-                if (parentItem) parentItem.style.setProperty('display', '', 'important');
-            }
-        } else {
-            el.style.setProperty('display', 'none', 'important');
-            if (el.classList.contains('nav-link')) {
-                const parentItem = el.closest('.nav-item');
-                if (parentItem) parentItem.style.setProperty('display', 'none', 'important');
-            }
+    document.querySelectorAll('.admin-only').forEach(el => {
+        el.style.setProperty('display', isAdmin ? '' : 'none', 'important');
+        if (el.classList.contains('nav-link')) {
+            const parentItem = el.closest('.nav-item');
+            if (parentItem) parentItem.style.setProperty('display', isAdmin ? '' : 'none', 'important');
         }
     });
     
     const mergeCard = document.getElementById('mergePatientsCard');
     if (mergeCard) {
-        if (isAdmin || (currentUser && currentUser.email === "reyad@clinic.com")) {
-            mergeCard.style.display = 'block';
-        } else {
-            mergeCard.style.display = 'none';
-        }
+        mergeCard.style.display = (isAdmin || (currentUser && currentUser.email === "reyad@clinic.com")) ? 'block' : 'none';
     }
 }
 
-// ===================== حفظ البريد الإلكتروني =====================
-function saveEmailToLocalStorage(email) {
-    if (email) {
-        localStorage.setItem('savedEmail', email);
-    }
-}
+//Local storage management
+function saveEmailToLocalStorage(email) { if (email) localStorage.setItem('savedEmail', email); }
+function getSavedEmail() { return localStorage.getItem('savedEmail') || ''; }
 
-function getSavedEmail() {
-    return localStorage.getItem('savedEmail') || '';
-}
-
-// ===================== وظائف تسجيل الدخول =====================
 window.toggleSaveEmail = function() {
     const emailInput = document.getElementById('loginEmail');
     const saveBtn = document.getElementById('saveEmailBtn');
-    const email = emailInput.value.trim();
-    
-    if (email) {
-        saveEmailToLocalStorage(email);
+    if (emailInput.value.trim()) {
+        saveEmailToLocalStorage(emailInput.value.trim());
         saveBtn.innerHTML = '<i class="fas fa-check-circle"></i>';
     } else {
         localStorage.removeItem('savedEmail');
@@ -142,121 +106,23 @@ window.loginWithEmail = async function() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const messageDiv = document.getElementById('loginMessage');
-    
-    if (!email || !password) {
-        messageDiv.textContent = '⚠️ الرجاء إدخال البريد الإلكتروني وكلمة المرور';
-        return;
-    }
-    
+    if (!email || !password) { messageDiv.textContent = '⚠️ الرجاء إدخال البيانات'; return; }
     try {
         messageDiv.textContent = '⏳ جاري تسجيل الدخول...';
         await signInWithEmailAndPassword(auth, email, password);
-        messageDiv.textContent = '✅ تم تسجيل الدخول بنجاح!';
     } catch (error) {
-        console.error(error);
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            messageDiv.textContent = '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
-        } else if (error.code === 'auth/invalid-email') {
-            messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
-        } else {
-            messageDiv.textContent = '❌ حدث خطأ: ' + error.message;
-        }
+        messageDiv.textContent = '❌ خطأ في عملية تسجيل الدخول';
     }
 };
 
-window.logoutUser = async function() {
-    try {
-        await signOut(auth);
-        alert('👋 تم تسجيل الخروج بنجاح');
-    } catch (error) {
-        console.error(error);
-        alert('❌ حدث خطأ أثناء تسجيل الخروج');
-    }
-};
+window.logoutUser = async function() { await signOut(auth); };
 
-// ===================== إعدادات الأدمن =====================
-window.openSettings = function() {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصفحة متاحة فقط للأدمن');
-        return;
-    }
-    
-    const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
-    modal.show();
-    document.getElementById('newUserEmail').value = '';
-    document.getElementById('newUserPassword').value = '';
-    document.getElementById('createUserMessage').textContent = '';
-};
-
-window.createNewUserByAdmin = async function() {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    const email = document.getElementById('newUserEmail').value.trim();
-    const password = document.getElementById('newUserPassword').value;
-    const messageDiv = document.getElementById('createUserMessage');
-    
-    if (!email || !password) {
-        messageDiv.textContent = '⚠️ الرجاء ملء جميع الحقول';
-        messageDiv.style.color = 'red';
-        return;
-    }
-    
-    if (password.length < 6) {
-        messageDiv.textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-        messageDiv.style.color = 'red';
-        return;
-    }
-    
-    try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        messageDiv.textContent = '✅ تم إنشاء الحساب بنجاح!';
-        messageDiv.style.color = 'green';
-        document.getElementById('newUserEmail').value = '';
-        document.getElementById('newUserPassword').value = '';
-        
-        setTimeout(() => {
-            messageDiv.textContent = '';
-        }, 3000);
-    } catch (error) {
-        console.error(error);
-        if (error.code === 'auth/email-already-in-use') {
-            messageDiv.textContent = '❌ هذا البريد الإلكتروني مسجل بالفعل';
-        } else if (error.code === 'auth/invalid-email') {
-            messageDiv.textContent = '❌ البريد الإلكتروني غير صالح';
-        } else if (error.code === 'auth/weak-password') {
-            messageDiv.textContent = '❌ كلمة المرور ضعيفة جداً';
-        } else {
-            messageDiv.textContent = '❌ حدث خطأ: ' + error.message;
-        }
-        messageDiv.style.color = 'red';
-    }
-};
-
-// ===================== دالة تحويل التاريخ =====================
-function parseExcelDate(excelDateValue) {
-    if (!excelDateValue) return new Date().toLocaleDateString('ar-EG');
-    let dateStr = String(excelDateValue).trim();
-    if (dateStr.includes('-')) return dateStr.replace(/-/g, '/');
-    if (dateStr.includes('/')) return dateStr;
-    const num = parseFloat(excelDateValue);
-    if (!isNaN(num)) {
-        const dateObj = new Date(Math.round((num - 25569) * 86400 * 1000));
-        return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`;
-    }
-    return dateStr;
-}
-
-// ===================== تحديث قائمة المرضى =====================
+// ===================== استرجاع وعرض بيانات المرضى وبناء الاستعلام الشامل =====================
 function loadPatientsList() {
-    const patientsRef = ref(db, 'patients');
-    onValue(patientsRef, (snapshot) => {
+    onValue(ref(db, 'patients'), (snapshot) => {
         allPatients = [];
         patientNamesList = [];
         const data = snapshot.val();
-        
         if (data) {
             Object.keys(data).forEach(key => {
                 const p = { id: key, ...data[key] };
@@ -264,26 +130,25 @@ function loadPatientsList() {
                 patientNamesList.push({
                     label: `${p.name} ${p.age ? `(${p.age} سنة)` : ''} ${p.phone ? `📞 ${p.phone}` : ''}`,
                     value: p.name,
-                    id: p.id,
-                    phone: p.phone,
-                    address: p.address,
-                    age: p.age
+                    id: p.id
                 });
             });
         }
-        
         displayPatientsList();
         updateAutocomplete();
         initMergeAutocomplete();
     });
 }
 
-// ===================== عرض قائمة المرضى =====================
 function displayPatientsList(searchTerm = '') {
     let filteredPatients = allPatients;
     if (searchTerm) {
+        searchTerm = searchTerm.toLowerCase().trim();
+        // تعديل الاستعلام: البحث بالاسم أو الجوال أو العنوان
         filteredPatients = allPatients.filter(p => 
-            p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+            p.name?.toLowerCase().includes(searchTerm) || 
+            p.phone?.toLowerCase().includes(searchTerm) || 
+            p.address?.toLowerCase().includes(searchTerm)
         );
     }
     
@@ -291,42 +156,32 @@ function displayPatientsList(searchTerm = '') {
         <table class="table table-bordered table-hover">
             <thead>
                 <tr>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">#</th>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">الاسم</th>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">العمر</th>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">الجوال</th>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">العنوان</th>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">تاريخ التسجيل</th>
-                    <th style="background: var(--table-header); color: white; padding: 12px;">إجراءات</th>
+                    <th>#</th><th>الاسم</th><th>العمر</th><th>الجوال</th><th>العنوان</th><th>تاريخ التسجيل</th><th>إجراءات</th>
                 </tr>
             </thead>
-            <tbody>
-    `;
+            <tbody>`;
     
     let index = 1;
     if (filteredPatients.length > 0) {
         filteredPatients.forEach(p => {
             html += `
                 <tr>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);">${index++}</td>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);"><strong>${p.name || '-'}</strong></td>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.age || '-'}</td>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.phone || '-'}</td>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.address || '-'}</td>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);">${p.createdAt || '-'}</td>
-                    <td style="padding: 10px; border: 1px solid var(--border-color);">
+                    <td>${index++}</td>
+                    <td><strong>${p.name || '-'}</strong></td>
+                    <td>${p.age || '-'}</td>
+                    <td>${p.phone || '-'}</td>
+                    <td>${p.address || '-'}</td>
+                    <td>${p.createdAt || '-'}</td>
+                    <td>
                         <button class="btn btn-sm btn-warning me-1" onclick="window.openEditPatientModal('${p.id}', '${p.name}', '${p.age || ''}', '${p.phone || ''}', '${p.address || ''}')"><i class="fas fa-edit"></i> تعديل</button>
                         <button class="btn btn-sm btn-danger" onclick="window.deletePatient('${p.id}')"><i class="fas fa-trash"></i></button>
                     </td>
-                </tr>
-            `;
+                </tr>`;
         });
     } else {
-        html += `<tr><td colspan="7" style="padding: 10px; text-align: center;">لا يوجد مرضى مسجلين</td></tr>`;
+        html += `<tr><td colspan="7" class="text-center">لا توجد نتائج مطابقة للبحث</td></tr>`;
     }
-    
-    html += `</tbody>
-        </table>`;
+    html += `</tbody></table>`;
     document.getElementById('patientsList').innerHTML = html;
 }
 
@@ -334,511 +189,74 @@ window.filterPatients = function() {
     displayPatientsList(document.getElementById('searchPatient').value);
 };
 
-// ===================== دوال تعديل بيانات المريض =====================
-window.openEditPatientModal = function(id, name, age, phone, address) {
-    document.getElementById('editPatientId').value = id;
-    document.getElementById('editPatientName').value = name;
-    document.getElementById('editPatientAge').value = age;
-    document.getElementById('editPatientPhone').value = phone;
-    document.getElementById('editPatientAddress').value = address;
-    
-    const modal = new bootstrap.Modal(document.getElementById('editPatientModal'));
-    modal.show();
-};
-
-window.savePatientEdit = async function() {
-    const id = document.getElementById('editPatientId').value;
-    const name = document.getElementById('editPatientName').value.trim();
-    const age = document.getElementById('editPatientAge').value.trim();
-    const phone = document.getElementById('editPatientPhone').value.trim();
-    const address = document.getElementById('editPatientAddress').value.trim();
-    
-    if (!name) {
-        alert('⚠️ الاسم الكامل مطلوب');
-        return;
-    }
-    
-    try {
-        const patientRef = ref(db, `patients/${id}`);
-        await update(patientRef, {
-            name: name,
-            age: age,
-            phone: phone,
-            address: address
-        });
-        
-        const modalEl = document.getElementById('editPatientModal');
-        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.hide();
-        
-        alert('✅ تم تحديث بيانات المريض بنجاح!');
-    } catch (error) {
-        console.error(error);
-        alert('❌ حدث خطأ أثناء تحديث البيانات');
-    }
-};
-
-// ===================== تحديث الـ Autocomplete =====================
-function updateAutocomplete() {
-    if (document.getElementById('patientSearchInput')) {
-        $("#patientSearchInput").autocomplete({
-            source: patientNamesList,
-            select: function(event, ui) {
-                document.getElementById('patientSearchInput').value = ui.item.value;
-                document.getElementById('selectedPatientId').value = ui.item.id;
-                return false;
-            }
-        });
-    }
-    
-    if (document.getElementById('historySearchInput')) {
-        $("#historySearchInput").autocomplete({
-            source: patientNamesList,
-            select: function(event, ui) {
-                document.getElementById('historySearchInput').value = ui.item.value;
-                document.getElementById('historySelectedPatientId').value = ui.item.id;
-                return false;
-            }
-        });
-    }
-    
-    if (document.getElementById('financePatientSearch')) {
-        $("#financePatientSearch").autocomplete({
-            source: patientNamesList,
-            select: function(event, ui) {
-                document.getElementById('financePatientSearch').value = ui.item.value;
-                document.getElementById('financeSelectedPatientId').value = ui.item.id;
-                window.getFinancialReportAutocomplete();
-                return false;
-            }
-        });
-    }
-}
-
-// ===================== دوال دمج المرضى =====================
-
-function initMergeAutocomplete() {
-    if (document.getElementById('mergeMainPatientSearch')) {
-        $("#mergeMainPatientSearch").autocomplete({
-            source: patientNamesList,
-            select: function(event, ui) {
-                document.getElementById('mergeMainPatientSearch').value = ui.item.value;
-                document.getElementById('mergeMainPatientId').value = ui.item.id;
-                
-                const patient = allPatients.find(p => p.id === ui.item.id);
-                document.getElementById('mergeMainPreview').innerHTML = `
-                    <i class="fas fa-info-circle"></i> تم اختيار: <strong>${patient?.name}</strong> 
-                    (${patient?.age ? patient.age + ' سنة' : 'عمر غير محدد'}) 
-                    ${patient?.phone ? '📞 ' + patient.phone : ''}
-                `;
-                enableMergeButtonIfReady();
-                return false;
-            }
-        });
-    }
-    
-    if (document.getElementById('mergeDuplicatePatientSearch')) {
-        $("#mergeDuplicatePatientSearch").autocomplete({
-            source: patientNamesList,
-            select: function(event, ui) {
-                document.getElementById('mergeDuplicatePatientSearch').value = ui.item.value;
-                document.getElementById('mergeDuplicatePatientId').value = ui.item.id;
-                
-                const patient = allPatients.find(p => p.id === ui.item.id);
-                document.getElementById('mergeDuplicatePreview').innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i> سيتم دمج: <strong>${patient?.name}</strong>
-                    (${patient?.age ? patient.age + ' سنة' : 'عمر غير محدد'}) 
-                    ${patient?.phone ? '📞 ' + patient.phone : ''}
-                `;
-                enableMergeButtonIfReady();
-                return false;
-            }
-        });
-    }
-}
-
-function enableMergeButtonIfReady() {
-    const mainId = document.getElementById('mergeMainPatientId').value;
-    const duplicateId = document.getElementById('mergeDuplicatePatientId').value;
-    const mergeBtn = document.getElementById('mergeBtn');
-    
-    if (mergeBtn) {
-        if (mainId && duplicateId && mainId !== duplicateId) {
-            mergeBtn.disabled = false;
-            mergeBtn.innerHTML = '<i class="fas fa-code-branch"></i> دمج المريض المكرر مع الأصلي';
-        } else if (mainId === duplicateId && mainId) {
-            mergeBtn.disabled = true;
-            mergeBtn.innerHTML = '<i class="fas fa-ban"></i> لا يمكن دمج المريض مع نفسه';
-        } else {
-            mergeBtn.disabled = true;
-            mergeBtn.innerHTML = '<i class="fas fa-code-branch"></i> دمج المريض المكرر مع الأصلي';
-        }
-    }
-}
-
-window.clearMergeSelection = function() {
-    document.getElementById('mergeMainPatientSearch').value = '';
-    document.getElementById('mergeMainPatientId').value = '';
-    document.getElementById('mergeDuplicatePatientSearch').value = '';
-    document.getElementById('mergeDuplicatePatientId').value = '';
-    document.getElementById('mergeMainPreview').innerHTML = '';
-    document.getElementById('mergeDuplicatePreview').innerHTML = '';
-    enableMergeButtonIfReady();
-};
-
-// ===================== الكشف عن المرضى المكررين (مع اختيار الاسم الأساسي) =====================
-window.findDuplicatePatients = function() {
-    if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
-        alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
-        return;
-    }
-    
-    const duplicates = [];
-    const processed = new Set();
-    
-    for (let i = 0; i < allPatients.length; i++) {
-        const p1 = allPatients[i];
-        if (processed.has(p1.id)) continue;
-        
-        const similar = [p1];
-        
-        for (let j = i + 1; j < allPatients.length; j++) {
-            const p2 = allPatients[j];
-            if (processed.has(p2.id)) continue;
-            
-            const name1 = p1.name?.trim().toLowerCase().replace(/\s+/g, ' ');
-            const name2 = p2.name?.trim().toLowerCase().replace(/\s+/g, ' ');
-            
-            if (name1 === name2 || 
-                (name1 && name2 && (name1.includes(name2) || name2.includes(name1)))) {
-                similar.push(p2);
-                processed.add(p2.id);
-            }
-            else if (p1.phone && p2.phone && p1.phone === p2.phone && p1.phone !== '') {
-                similar.push(p2);
-                processed.add(p2.id);
-            }
-        }
-        
-        if (similar.length > 1) {
-            duplicates.push(similar);
-        }
-        processed.add(p1.id);
-    }
-    
-    const container = document.getElementById('duplicateSuggestionList');
-    if (duplicates.length === 0) {
-        container.innerHTML = '<div class="text-success p-2"><i class="fas fa-check-circle"></i> لا توجد أسماء مكررة أو متشابهة حالياً.</div>';
-        return;
-    }
-    
-    let html = '<div class="p-2"><strong>🔍 المرضى المحتمل دمجهم:</strong><ul class="mt-2">';
-    
-    for (let groupIndex = 0; groupIndex < duplicates.length; groupIndex++) {
-        const group = duplicates[groupIndex];
-        
-        html += `<li class="mb-3 p-2 border rounded">
-                    <div class="mb-2">
-                        <i class="fas fa-users text-primary"></i> <strong>المجموعة ${groupIndex + 1}:</strong>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        ${group.map(p => `
-                            <div class="col-md-4 col-sm-6">
-                                <div class="card p-2 ${p.id === group[0].id ? 'border-success bg-success bg-opacity-10' : 'border-secondary'}">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="group_${groupIndex}" value="${p.id}" id="radio_${p.id}" ${p.id === group[0].id ? 'checked' : ''}>
-                                        <label class="form-check-label" for="radio_${p.id}">
-                                            <strong>${p.name}</strong><br>
-                                            <small>العمر: ${p.age || '?'} سنة</small><br>
-                                            <small>${p.phone ? '📞 ' + p.phone : ''}</small>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <button class="btn btn-warning btn-sm mt-2" onclick="window.mergeSelectedFromGroup(${groupIndex}, ${JSON.stringify(group.map(p => ({ id: p.id, name: p.name }))).replace(/"/g, '&quot;')}, this)">
-                        <i class="fas fa-code-branch"></i> دمج المختارين مع الأساسي
-                    </button>
-                </li>`;
-    }
-    html += '</ul></div>';
-    container.innerHTML = html;
-};
-
-// ===================== دمج المجموعة مع اختيار الاسم الأساسي =====================
-window.mergeSelectedFromGroup = async function(groupIndex, groupArray, buttonElement) {
-    if (!isCurrentUserAdmin() && currentUser?.email !== "reyad@clinic.com") {
-        alert('⚠️ هذه الصلاحية متاحة فقط للمشرفين');
-        return;
-    }
-    
-    // الحصول على الاسم المختار من الراديو
-    const selectedRadio = document.querySelector(`input[name="group_${groupIndex}"]:checked`);
-    if (!selectedRadio) {
-        alert('⚠️ الرجاء اختيار الاسم الذي تريد اعتماده كأساس');
-        return;
-    }
-    
-    const mainId = selectedRadio.value;
-    const mainPatient = groupArray.find(p => p.id === mainId);
-    const duplicatePatients = groupArray.filter(p => p.id !== mainId);
-    
-    if (duplicatePatients.length === 0) {
-        alert('❌ لا يوجد مرضى مكررين في هذه المجموعة');
-        return;
-    }
-    
-    const confirmMsg = `⚠️ هل أنت متأكد من دمج:\n\n"${duplicatePatients.map(p => p.name).join('", "')}"\n\n← إلى ←\n\n"${mainPatient.name}"\n\nسيتم:\n✅ نقل جميع الزيارات إلى "${mainPatient.name}"\n✅ حذف المرضى المكررين نهائياً\n✅ تحديث جميع التقارير تلقائياً\n\nملاحظة: سيتم دمج هذه المجموعة فقط، وليس جميع المجموعات الأخرى.`;
-    
-    if (!confirm(confirmMsg)) return;
-    
-    // تعطيل الزر أثناء العملية
-    buttonElement.disabled = true;
-    buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الدمج...';
-    
-    try {
-        const visitsRef = ref(db, 'visits');
-        const visitsSnapshot = await get(visitsRef);
-        const visits = visitsSnapshot.val();
-        
-        let totalTransferCount = 0;
-        
-        for (const duplicatePatient of duplicatePatients) {
-            let transferCount = 0;
-            
-            if (visits) {
-                for (const [visitId, visitData] of Object.entries(visits)) {
-                    if (visitData.patientId === duplicatePatient.id) {
-                        await update(ref(db, `visits/${visitId}`), {
-                            patientId: mainId,
-                            patientName: mainPatient.name
-                        });
-                        transferCount++;
-                    }
-                }
-            }
-            
-            await remove(ref(db, `patients/${duplicatePatient.id}`));
-            totalTransferCount += transferCount;
-        }
-        
-        alert(`✅ تم دمج هذه المجموعة بنجاح!\n\nتم نقل ${totalTransferCount} زيارة إلى "${mainPatient.name}"\nتم حذف ${duplicatePatients.length} مريض مكرر`);
-        
-        window.findDuplicatePatients();
-        
-        if (document.getElementById('historyResult') && document.getElementById('historyResult').innerHTML !== '') {
-            window.searchMedicalHistoryAutocomplete();
-        }
-        if (document.getElementById('financeResult') && document.getElementById('financeResult').innerHTML !== '') {
-            window.getFinancialReportAutocomplete();
-        }
-        
-    } catch (error) {
-        console.error(error);
-        alert('❌ حدث خطأ أثناء الدمج: ' + error.message);
-        buttonElement.disabled = false;
-        buttonElement.innerHTML = '<i class="fas fa-code-branch"></i> إعادة المحاولة';
-    }
-};
-
-// ===================== إضافة مريض جديد =====================
+// ===================== إضافة مريض جديد وسؤال المخدم لتسجيل زيارة =====================
 window.addPatient = async function() {
     const name = document.getElementById('patientName').value.trim();
-    if (!name) {
-        alert('⚠️ الرجاء إدخل اسم المريض');
-        return;
-    }
+    const age = document.getElementById('patientAge').value.trim();
+    const phone = document.getElementById('patientPhone').value.trim();
+    const address = document.getElementById('patientAddress').value.trim();
+    
+    if (!name) { alert('⚠️ الرجاء إدخال اسم المريض'); return; }
     
     const newPatientRef = push(ref(db, 'patients'));
+    const targetId = newPatientRef.key;
     const patientData = {
-        name: name,
-        age: document.getElementById('patientAge').value.trim(),
-        phone: document.getElementById('patientPhone').value.trim(),
-        address: document.getElementById('patientAddress').value.trim(),
+        name: name, age: age, phone: phone, address: address,
         createdAt: new Date().toLocaleDateString('ar-EG')
     };
     
     try {
         await set(newPatientRef, patientData);
+        
+        // تفريغ المدخلات بصفحة المرضى
         document.getElementById('patientName').value = '';
         document.getElementById('patientAge').value = '';
         document.getElementById('patientPhone').value = '';
         document.getElementById('patientAddress').value = '';
-        alert('✅ تم إضافة المريض بنجاح');
-    } catch (error) {
-        console.error(error);
-        alert('❌ حدث خطأ أثناء الإضافة');
-    }
-};
-
-// ===================== حذف مريض =====================
-window.deletePatient = async (id) => {
-    if (confirm('⚠️ هل أنت متأكد من حذف هذا المريض؟ سيتم حذف جميع زياراته أيضاً!')) {
-        try {
-            await remove(ref(db, `patients/${id}`));
-            const visitsRef = ref(db, 'visits');
-            const snapshot = await get(visitsRef);
-            const visits = snapshot.val();
-            if (visits) {
-                for (const visitId of Object.keys(visits)) {
-                    if (visits[visitId].patientId === id) {
-                        await remove(ref(db, `visits/${visitId}`));
-                    }
-                }
+        
+        // مربع الخيارين: تسجيل زيارة أم لا
+        if (confirm('✅ تم حفظ المريض بنجاح!\n\nهل تريد تسجيل زيارة جديدة لهذا المريض الآن؟')) {
+            // 1. تعبئة بيانات المريض تلقائياً في صفحة إدخال الزيارة
+            document.getElementById('patientSearchInput').value = name;
+            document.getElementById('selectedPatientId').value = targetId;
+            
+            // 2. تفعيل وتحويل المستخدم مباشرة لتبويب الزيارات
+            const visitsTabButton = document.getElementById('visits-tab');
+            if (visitsTabButton) {
+                bootstrap.Tab.getInstance(visitsTabButton)?.show() || new bootstrap.Tab(visitsTabButton).show();
             }
-            alert('🗑️ تم حذف المريض وجميع زياراته');
-        } catch (error) {
-            console.error(error);
-            alert('❌ حدث خطأ أثناء الحذف');
+        } else {
+            alert('✅ تم حفظ المريض المضاف بنجاح بقائمة ملفات العيادة.');
         }
-    }
-};
-
-// ===================== إضافة زيارة =====================
-window.addVisitWithAutocomplete = async function() {
-    const patientId = document.getElementById('selectedPatientId').value;
-    if (!patientId) {
-        alert('⚠️ الرجاء اختيار مريض من القائمة المنسدلة');
-        return;
-    }
-    
-    const selectedPatient = allPatients.find(p => p.id === patientId);
-    const now = new Date();
-    
-    const totalAmount = parseFloat(document.getElementById('totalAmount').value) || 0;
-    const paidAmount = parseFloat(document.getElementById('paidAmount').value) || 0;
-    const remainingAmount = totalAmount - paidAmount;
-    const boxesCount = parseFloat(document.getElementById('boxesCount').value) || 0;
-    
-    const newVisitRef = push(ref(db, 'visits'));
-    const visitData = {
-        patientId: patientId,
-        patientName: selectedPatient?.name || 'غير معروف',
-        diagnosis: document.getElementById('diagnosis').value.trim(),
-        treatment: document.getElementById('treatment').value.trim(),
-        boxesCount: boxesCount,
-        totalAmount: totalAmount,
-        paidAmount: paidAmount,
-        remainingAmount: remainingAmount,
-        date: now.toLocaleDateString('ar-EG'),
-        time: now.toLocaleTimeString('ar-EG'),
-        timestamp: now.getTime()
-    };
-    
-    try {
-        await set(newVisitRef, visitData);
-        document.getElementById('patientSearchInput').value = '';
-        document.getElementById('selectedPatientId').value = '';
-        document.getElementById('diagnosis').value = '';
-        document.getElementById('treatment').value = '';
-        document.getElementById('boxesCount').value = '0';
-        document.getElementById('totalAmount').value = '';
-        document.getElementById('paidAmount').value = '';
-        document.getElementById('remainingAmount').value = '';
-        alert('✅ تم تسجيل الزيارة بنجاح!');
     } catch (error) {
-        console.error(error);
-        alert('❌ حدث خطأ أثناء تسجيل الزيارة');
+        alert('❌ حدث خطأ أثناء عملية الحفظ');
     }
 };
 
-// ===================== البحث في التاريخ الطبي (مع تحسين عرض النصوص والألوان) =====================
-window.searchMedicalHistoryAutocomplete = async () => {
-    const patientId = document.getElementById('historySelectedPatientId').value;
-    if (!patientId) {
-        alert('⚠️ الرجاء اختيار مريض من القائمة');
-        return;
-    }
-    
-    const visitsRef = ref(db, 'visits');
-    const snapshot = await get(visitsRef);
-    const visits = snapshot.val();
-    
-    let html = '<div class="accordion" id="historyAccordion">';
-    let found = false;
-    
-    if (visits) {
-        for (const key of Object.keys(visits)) {
-            const v = visits[key];
-            if (patientId === v.patientId) {
-                found = true;
-                const remainingClass = v.remainingAmount < 0 ? 'text-danger bg-danger bg-opacity-10 p-1 rounded' : 'text-success bg-success bg-opacity-10 p-1 rounded';
-                html += `<div class="accordion-item mb-2">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${key}">
-                            🩺 ${v.patientName} - ${v.date} - إجمالي: ${v.totalAmount || 0} د.أ
-                        </button>
-                    </h2>
-                    <div id="collapse${key}" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
-                        <div class="accordion-body">
-                            <p><strong><i class="fas fa-stethoscope"></i> التشخيص:</strong> <span style="white-space: normal; word-wrap: break-word; display: inline-block;">${v.diagnosis || '-'}</span></p>
-                            <p><strong><i class="fas fa-pills"></i> العلاج:</strong> <span style="white-space: normal; word-wrap: break-word; display: inline-block;">${v.treatment || '-'}</span></p>
-                            <p><strong><i class="fas fa-boxes"></i> عدد العلب:</strong> ${v.boxesCount || 0}</p>
-                            <div class="payment-details" style="background: var(--border-color); border-radius: 10px; padding: 12px;">
-                                <p><strong><i class="fas fa-dollar-sign" style="color: #0d6efd;"></i> المبلغ الكامل:</strong> <span class="fw-bold text-primary">${v.totalAmount || 0} د.أ</span></p>
-                                <p><strong><i class="fas fa-money-bill" style="color: #198754;"></i> المبلغ المدفوع:</strong> <span class="fw-bold text-success">${v.paidAmount || 0} د.أ</span></p>
-                                <p><strong><i class="fas fa-credit-card" style="color: ${v.remainingAmount < 0 ? '#dc3545' : '#198754'};"></i> المبلغ المتبقي:</strong> <span class="fw-bold ${v.remainingAmount < 0 ? 'text-danger' : 'text-success'}">${v.remainingAmount || 0} د.أ</span></p>
-                            </div>
-                            <p><strong><i class="fas fa-clock"></i> الوقت:</strong> ${v.time || '-'}</p>
-                            <button class="btn btn-sm btn-danger mt-2" onclick="window.deleteVisit('${key}')"><i class="fas fa-trash"></i> حذف الزيارة</button>
-                        </div>
-                    </div>
-                </div>`;
-            }
-        }
-    }
-    
-    html += '</div>';
-    if (!found) html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض</div>';
-    
-    document.getElementById('historyResult').innerHTML = html;
-};
-
-window.deleteVisit = async (id) => {
-    if (confirm('⚠️ هل أنت متأكد من حذف هذه الزيارة؟')) {
-        try {
-            await remove(ref(db, `visits/${id}`));
-            alert('🗑️ تم حذف الزيارة');
-            window.searchMedicalHistoryAutocomplete();
-            window.getFinancialReportAutocomplete();
-        } catch (error) {
-            console.error(error);
-        }
-    }
-};
-
-// ===================== التقارير المالية =====================
+// ===================== التقارير المالية المتطورة المحدثة =====================
 window.getFinancialReportAutocomplete = async () => {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const patientId = document.getElementById('financeSelectedPatientId').value;
     const patientName = document.getElementById('financePatientSearch').value.trim();
     
-    const visitsRef = ref(db, 'visits');
-    const snapshot = await get(visitsRef);
+    const snapshot = await get(ref(db, 'visits'));
     const visits = snapshot.val();
     
-    let totalAmountSum = 0;
-    let paidAmountSum = 0;
-    let remainingAmountSum = 0;
+    let totalAmountSum = 0, paidAmountSum = 0, remainingAmountSum = 0;
     let filteredVisits = [];
     
     if (visits) {
         for (const key of Object.keys(visits)) {
             const v = visits[key];
             let visitDate = null;
-            
             if (v.date) {
                 const parts = v.date.split('/');
-                if (parts.length === 3) {
-                    visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                }
+                if (parts.length === 3) visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
             }
             
             let start = startDate ? new Date(startDate) : null;
             let end = endDate ? new Date(endDate) : null;
-            
             if(start) start.setHours(0,0,0,0);
             if(end) end.setHours(23,59,59,999);
             
@@ -846,16 +264,11 @@ window.getFinancialReportAutocomplete = async () => {
             if (visitDate) {
                 if (start && visitDate < start) inRange = false;
                 if (end && visitDate > end) inRange = false;
-            } else {
-                inRange = false;
-            }
+            } else { inRange = false; }
             
             let patientMatch = true;
-            if (patientId) {
-                patientMatch = (patientId === v.patientId);
-            } else if (patientName) {
-                patientMatch = v.patientName?.toLowerCase().includes(patientName.toLowerCase());
-            }
+            if (patientId) { patientMatch = (patientId === v.patientId); }
+            else if (patientName) { patientMatch = v.patientName?.toLowerCase().includes(patientName.toLowerCase()); }
             
             if (inRange && patientMatch) {
                 filteredVisits.push(v);
@@ -866,28 +279,27 @@ window.getFinancialReportAutocomplete = async () => {
         }
     }
     
+    // ترتيب الحسابات والزيارات حسب الـ Timestamp من الأحدث للأقدم أو العكس
+    filteredVisits.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    
     let html = '';
     const collectionRate = totalAmountSum > 0 ? Math.round((paidAmountSum / totalAmountSum) * 100) : 0;
     
     if (patientId || patientName) {
+        // حالة اختيار مريض معين (عرض الكشف التفصيلي له)
         if (filteredVisits.length > 0) {
             const targetId = patientId || filteredVisits[0].patientId;
-            const patientObj = allPatients.find(p => p.id === targetId) || {
-                name: filteredVisits[0].patientName,
-                age: '-',
-                phone: '-',
-                address: '-'
-            };
+            const patientObj = allPatients.find(p => p.id === targetId) || { name: filteredVisits[0].patientName };
 
             html = `
                 <div class="animate__animated animate__fadeIn">
-                    <div class="stat-card mb-4 text-start p-4" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+                    <div class="stat-card mb-4 text-start p-4">
                         <h4 class="text-center mb-3"><i class="fas fa-file-invoice-dollar"></i> كشف حساب المريض التفصيلي</h4>
                         <div class="row text-white g-2 fs-6">
-                            <div class="col-md-6"><strong><i class="fas fa-user"></i> الاسم:</strong> ${patientObj.name}</div>
-                            <div class="col-md-6"><strong><i class="fas fa-birthday-cake"></i> العمر:</strong> ${patientObj.age || '-'} سنة</div>
-                            <div class="col-md-6"><strong><i class="fas fa-phone"></i> رقم الجوال:</strong> ${patientObj.phone || '-'}</div>
-                            <div class="col-md-6"><strong><i class="fas fa-map-marker-alt"></i> العنوان:</strong> ${patientObj.address || '-'}</div>
+                            <div class="col-md-6"><strong>الاسم:</strong> ${patientObj.name}</div>
+                            <div class="col-md-6"><strong>العمر:</strong> ${patientObj.age || '-'} سنة</div>
+                            <div class="col-md-6"><strong>الجوال:</strong> ${patientObj.phone || '-'}</div>
+                            <div class="col-md-6"><strong>العنوان:</strong> ${patientObj.address || '-'}</div>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -898,297 +310,300 @@ window.getFinancialReportAutocomplete = async () => {
                             <tbody>`;
             
             for (const v of filteredVisits) {
-                const remainingClass = v.remainingAmount < 0 ? 'text-danger' : 'text-success';
                 html += `<tr>
                     <td>${v.date || '-'}</td>
-                    <td style="white-space: normal; word-wrap: break-word; max-width: 200px;">${v.diagnosis || '-'}</td>
-                    <td style="white-space: normal; word-wrap: break-word; max-width: 200px;">${v.treatment || '-'}</td>
+                    <td>${v.diagnosis || '-'}</td>
+                    <td>${v.treatment || '-'}</td>
                     <td>${v.boxesCount || 0}</td>
                     <td class="text-primary fw-bold">${v.totalAmount || 0}</td>
                     <td class="text-success fw-bold">${v.paidAmount || 0}</td>
-                    <td class="${remainingClass} fw-bold">${v.remainingAmount || 0}</td>
+                    <td class="${v.remainingAmount < 0 ? 'text-danger':'text-success'} fw-bold">${v.remainingAmount || 0}</td>
                 </tr>`;
             }
-            
             html += `</tbody>
                     <tfoot class="table-info">
                         <tr><td colspan="4"><strong>الإجمالي</strong></td>
                         <td><strong>${totalAmountSum} د.أ</strong></td>
                         <td><strong>${paidAmountSum} د.أ</strong></td>
                         <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
-                    </tr></tfoot>
-                \dStack
-                    </div>
-                </div>`;
+                    </tr></tfoot></table></div></div>`;
         } else {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
         }
     } else {
-        const remainingClass = remainingAmountSum < 0 ? 'text-danger' : 'text-success';
-        html = `
-            <div class="animate__animated animate__fadeIn">
-                <div class="total-box">
-                    <h4><i class="fas fa-chart-line"></i> التقرير المالي العام</h4>
-                    <div class="row mt-4">
-                        <div class="col-md-4"><h3><i class="fas fa-dollar-sign"></i> إجمالي الإيرادات: ${totalAmountSum} د.أ</h3></div>
-                        <div class="col-md-4"><h3><i class="fas fa-money-bill"></i> المدفوع: ${paidAmountSum} د.أ</h3></div>
-                        <div class="col-md-4"><h3><i class="fas fa-credit-card"></i> المتبقي: <span class="${remainingClass}">${remainingAmountSum} د.أ</span></h3></div>
+        // [تعديل] حالة عدم اختيار مريض معين (عرض الكشف العام الشامل على شكل جدول تفصيلي حسب التاريخ)
+        if (filteredVisits.length > 0) {
+            html = `
+                <div class="animate__animated animate__fadeIn">
+                    <div class="total-box mb-4">
+                        <h4><i class="fas fa-chart-line"></i> ملخص الإيرادات العامة للفترة</h4>
+                        <div class="row mt-4">
+                            <div class="col-md-4"><h3>الإيرادات: ${totalAmountSum} د.أ</h3></div>
+                            <div class="col-md-4"><h3>المدفوع: ${paidAmountSum} د.أ</h3></div>
+                            <div class="col-md-4"><h3>المتبقي: <span class="${remainingAmountSum < 0 ? 'text-danger':''}">${remainingAmountSum} د.أ</span></h3></div>
+                        </div>
+                        <div class="custom-progress mt-3"><div class="custom-progress-bar" style="width: ${collectionRate}%;">${collectionRate}% نسبة التحصيل</div></div>
                     </div>
-                    <hr>
-                    <div class="row mt-3">
-                        <div class="col-md-6"><p><i class="fas fa-chart-simple"></i> عدد الزيارات: ${filteredVisits.length}</p></div>
-                        <div class="col-md-6"><p><i class="fas fa-chart-line"></i> نسبة التحصيل: ${collectionRate}%</p></div>
+                    
+                    <h5 class="mb-3 text-white"><i class="fas fa-list-alt"></i> سجل الكشف المالي التفصيلي لجميع المرضى مرتباً بالتاريخ:</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>المريض</th>
+                                    <th>المبلغ الكامل (د.أ)</th>
+                                    <th>المدفوع (د.أ)</th>
+                                    <th>المتبقي (د.أ)</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+            
+            for (const v of filteredVisits) {
+                html += `
+                    <tr>
+                        <td>${v.date || '-'} ${v.time ? `<small class="text-muted">(${v.time})</small>` : ''}</td>
+                        <td><strong>${v.patientName || 'مريض غير معروف'}</strong></td>
+                        <td class="text-primary fw-bold">${v.totalAmount || 0}</td>
+                        <td class="text-success fw-bold">${v.paidAmount || 0}</td>
+                        <td class="${v.remainingAmount < 0 ? 'text-danger' : 'text-success'} fw-bold">${v.remainingAmount || 0}</td>
+                    </tr>`;
+            }
+            
+            html += `
+                            </tbody>
+                            <tfoot class="table-warning text-dark">
+                                <tr>
+                                    <td colspan="2"><strong>المجموع الكلي للحركات المالية</strong></td>
+                                    <td><strong>${totalAmountSum} د.أ</strong></td>
+                                    <td><strong>${paidAmountSum} د.أ</strong></td>
+                                    <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-                    <div class="custom-progress mt-2"><div class="custom-progress-bar" style="width: ${collectionRate}%;">${collectionRate}%</div></div>
-                </div>
-            </div>`;
+                </div>`;
+        } else {
+            html = '<div class="alert alert-warning">❌ لا توجد قيود مالية مسجلة خلال الفترة الزمنية المحددة</div>';
+        }
     }
     document.getElementById('financeResult').innerHTML = html;
 };
 
-// ===================== حذف جميع المرضى (للأدمن فقط) =====================
-window.clearAllPatientsData = async () => {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    if (confirm('🚨 هل أنت متأكد من حذف جميع المرضى؟ هذا الإجراء لا يمكن التراجع عنه!')) {
-        try {
-            await remove(ref(db, 'patients'));
-            alert('✅ تم حذف جميع المرضى');
-        } catch (error) {
-            alert('❌ حدث خطأ: ' + error.message);
-        }
-    }
+// ===================== بقية الوظائف المساعدة وتعديل وحذف السجلات =====================
+window.openEditPatientModal = function(id, name, age, phone, address) {
+    document.getElementById('editPatientId').value = id;
+    document.getElementById('editPatientName').value = name;
+    document.getElementById('editPatientAge').value = age;
+    document.getElementById('editPatientPhone').value = phone;
+    document.getElementById('editPatientAddress').value = address;
+    new bootstrap.Modal(document.getElementById('editPatientModal')).show();
 };
 
-// ===================== حذف جميع الزيارات (للأدمن فقط) =====================
-window.clearAllVisitsData = async () => {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    if (confirm('🚨 هل أنت متأكد من حذف جميع الزيارات؟ هذا الإجراء لا يمكن التراجع عنه!')) {
-        try {
-            await remove(ref(db, 'visits'));
-            alert('✅ تم حذف جميع الزيارات');
-            if(document.getElementById('historyResult')) document.getElementById('historyResult').innerHTML = '';
-        } catch (error) {
-            alert('❌ حدث خطأ: ' + error.message);
-        }
-    }
-};
-
-// ===================== دوال Excel (للأدمن فقط) =====================
-window.downloadTemplate = function(type) {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    let headers = [];
-    let filename = "";
-    if (type === "patients") {
-        headers = [["الاسم", "العمر", "الجوال", "العنوان"]];
-        filename = "قالب_استيراد_المرضى.xlsx";
-    } else if (type === "visits") {
-        headers = [["اسم المريض", "التشخيص", "العلاج", "عدد العلب", "المبلغ الكامل", "المبلغ المدفوع", "التاريخ"]];
-        filename = "قالب_استيراد_الزيارات.xlsx";
-    }
-    const ws = XLSX.utils.aoa_to_sheet(headers);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, filename);
-};
-
-window.importPatientsExcel = function() {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    const fileInput = document.getElementById('excelPatientsFile');
-    if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف Excel أولاً"); }
-    
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = async function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(worksheet);
-            
-            let count = 0;
-            for (const row of json) {
-                const name = row["الاسم"]?.toString().trim();
-                if (!name) continue;
-                
-                const newPatientRef = push(ref(db, 'patients'));
-                await set(newPatientRef, {
-                    name: name,
-                    age: row["العمر"]?.toString().trim() || "",
-                    phone: row["الجوال"]?.toString().trim() || "",
-                    address: row["العنوان"]?.toString().trim() || "",
-                    createdAt: new Date().toLocaleDateString('ar-EG')
-                });
-                count++;
-            }
-            alert(`✅ تم استيراد عدد ${count} مريض بنجاح إلى قاعدة البيانات!`);
-            fileInput.value = "";
-        } catch (err) {
-            alert("❌ حدث خطأ أثناء قراءة الملف: " + err.message);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-};
-
-window.importVisitsExcel = async function() {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    const fileInput = document.getElementById('excelVisitsFile');
-    if (!fileInput.files.length) { return alert("⚠️ الرجاء اختيار ملف التاريخ الطبي Excel أولاً"); }
-    
+window.savePatientEdit = async function() {
+    const id = document.getElementById('editPatientId').value;
+    const name = document.getElementById('editPatientName').value.trim();
+    if (!name) { alert('⚠️ الاسم مطلوب'); return; }
     try {
-        const patientsSnapshot = await get(ref(db, 'patients'));
-        const currentPatientsData = patientsSnapshot.val() || {};
-        const currentPatientsList = Object.keys(currentPatientsData).map(k => ({ id: k, name: currentPatientsData[k].name }));
-        
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = async function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            
-            const json = XLSX.utils.sheet_to_json(worksheet, { raw: true });
-            
-            let count = 0;
-            const now = new Date();
-            
-            for (const row of json) {
-                const pName = row["اسم المريض"]?.toString().trim();
-                if (!pName) continue;
-                
-                let matchPatient = currentPatientsList.find(p => p.name.toLowerCase() === pName.toLowerCase());
-                let targetId = "";
-                
-                if (matchPatient) {
-                    targetId = matchPatient.id;
-                } else {
-                    const newPRef = push(ref(db, 'patients'));
-                    await set(newPRef, { name: pName, age: "", phone: "", address: "", createdAt: new Date().toLocaleDateString('ar-EG') });
-                    targetId = newPRef.key;
-                    currentPatientsList.push({ id: targetId, name: pName });
-                }
-                
-                const total = parseFloat(row["المبلغ الكامل"]) || 0;
-                const paid = parseFloat(row["المبلغ المدفوع"]) || 0;
-                const remaining = total - paid;
-                const boxesCount = parseFloat(row["عدد العلب"]) || 0;
-                
-                const structuredDate = parseExcelDate(row["التاريخ"]);
-                
-                const newVisitRef = push(ref(db, 'visits'));
-                await set(newVisitRef, {
-                    patientId: targetId,
-                    patientName: pName,
-                    diagnosis: row["التشخيص"]?.toString().trim() || "-",
-                    treatment: row["العلاج"]?.toString().trim() || "-",
-                    boxesCount: boxesCount,
-                    totalAmount: total,
-                    paidAmount: paid,
-                    remainingAmount: remaining,
-                    date: structuredDate,
-                    time: now.toLocaleTimeString('ar-EG'),
-                    timestamp: now.getTime()
-                });
-                count++;
-            }
-            alert(`✅ تم استيراد وتحديث عدد ${count} سجل زيارة طبي بنجاح!`);
-            fileInput.value = "";
-        };
-        reader.readAsArrayBuffer(file);
-    } catch (err) {
-        alert("❌ حدث خطأ: " + err.message);
-    }
-};
-
-window.exportPatientsToExcel = function() {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    if (!allPatients.length) return alert("❌ لا توجد بيانات مرضى لتصديرها");
-    
-    const dataRows = allPatients.map(p => ({
-        "الاسم": p.name || "",
-        "العمر": p.age || "",
-        "الجوال": p.phone || "",
-        "العنوان": p.address || "",
-        "تاريخ التسجيل": p.createdAt || ""
-    }));
-    
-    const ws = XLSX.utils.json_to_sheet(dataRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "المرضى");
-    XLSX.writeFile(wb, `قائمة_المرضى_الكلية_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
-};
-
-window.exportVisitsToExcel = async function() {
-    if (!isCurrentUserAdmin()) {
-        alert('⚠️ هذه الصلاحية متاحة فقط للأدمن');
-        return;
-    }
-    
-    try {
-        const visitsRef = ref(db, 'visits');
-        const snapshot = await get(visitsRef);
-        const visits = snapshot.val();
-        
-        if (!visits) return alert("❌ لا توجد بيانات زيارات لتصديرها حالياً");
-        
-        const dataRows = Object.keys(visits).map(key => {
-            const v = visits[key];
-            return {
-                "اسم المريض": v.patientName || "",
-                "التشخيص": v.diagnosis || "",
-                "العلاج": v.treatment || "",
-                "عدد العلب": v.boxesCount || 0,
-                "المبلغ الكامل": v.totalAmount || 0,
-                "المبلغ المدفوع": v.paidAmount || 0,
-                "المبلغ المتبقي": v.remainingAmount || 0,
-                "التاريخ": v.date || "",
-                "الوقت": v.time || ""
-            };
+        await update(ref(db, `patients/${id}`), {
+            name: name, age: document.getElementById('editPatientAge').value.trim(),
+            phone: document.getElementById('editPatientPhone').value.trim(),
+            address: document.getElementById('editPatientAddress').value.trim()
         });
-        
-        const ws = XLSX.utils.json_to_sheet(dataRows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "التاريخ الطبي");
-        XLSX.writeFile(wb, `التاريخ_الطبي_والزيارات_${new Date().toLocaleDateString('ar-EG')}.xlsx`);
-    } catch (err) {
-        alert("❌ فشل التصدير: " + err.message);
+        bootstrap.Modal.getInstance(document.getElementById('editPatientModal'))?.hide();
+    } catch (e) { alert('❌ فشل التحديث'); }
+};
+
+function updateAutocomplete() {
+    ["#patientSearchInput", "#historySearchInput", "#financePatientSearch"].forEach(selector => {
+        if (document.getElementById(selector.replace('#', ''))) {
+            $(selector).autocomplete({
+                source: patientNamesList,
+                select: function(event, ui) {
+                    $(selector).val(ui.item.value);
+                    if (selector === "#patientSearchInput") document.getElementById('selectedPatientId').value = ui.item.id;
+                    if (selector === "#historySearchInput") document.getElementById('historySelectedPatientId').value = ui.item.id;
+                    if (selector === "#financePatientSearch") {
+                        document.getElementById('financeSelectedPatientId').value = ui.item.id;
+                        window.getFinancialReportAutocomplete();
+                    }
+                    return false;
+                }
+            });
+        }
+    });
+}
+
+window.addVisitWithAutocomplete = async function() {
+    const patientId = document.getElementById('selectedPatientId').value;
+    if (!patientId) { alert('⚠️ الرجاء اختيار مريض أولاً'); return; }
+    const selectedPatient = allPatients.find(p => p.id === patientId);
+    const now = new Date();
+    
+    const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+    const paid = parseFloat(document.getElementById('paidAmount').value) || 0;
+    
+    const visitData = {
+        patientId: patientId, patientName: selectedPatient?.name || 'غير معروف',
+        diagnosis: document.getElementById('diagnosis').value.trim(),
+        treatment: document.getElementById('treatment').value.trim(),
+        boxesCount: parseFloat(document.getElementById('boxesCount').value) || 0,
+        totalAmount: total, paidAmount: paid, remainingAmount: total - paid,
+        date: now.toLocaleDateString('ar-EG'), time: now.toLocaleTimeString('ar-EG'), timestamp: now.getTime()
+    };
+    
+    try {
+        await set(push(ref(db, 'visits')), visitData);
+        ["patientSearchInput", "selectedPatientId", "diagnosis", "treatment", "totalAmount", "paidAmount", "remainingAmount"].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('boxesCount').value = '0';
+        alert('✅ تم تسجيل الزيارة بنجاح');
+    } catch (e) { alert('❌ فشل التسجيل'); }
+};
+
+window.searchMedicalHistoryAutocomplete = async () => {
+    const patientId = document.getElementById('historySelectedPatientId').value;
+    if (!patientId) { alert('⚠️ الرجاء تحديد مريض'); return; }
+    const snapshot = await get(ref(db, 'visits'));
+    const visits = snapshot.val();
+    let html = '<div class="accordion" id="historyAccordion">', found = false;
+    
+    if (visits) {
+        Object.keys(visits).forEach(key => {
+            const v = visits[key];
+            if (patientId === v.patientId) {
+                found = true;
+                html += `<div class="accordion-item mb-2">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${key}">
+                            🩺 ${v.date} - إجمالي الإجراء: ${v.totalAmount || 0} د.أ
+                        </button>
+                    </h2>
+                    <div id="collapse${key}" class="accordion-collapse collapse" data-bs-parent="#historyAccordion">
+                        <div class="accordion-body">
+                            <p><strong>التشخيص:</strong> ${v.diagnosis || '-'}</p>
+                            <p><strong>العلاج:</strong> ${v.treatment || '-'}</p>
+                            <p><strong>عدد العلب:</strong> ${v.boxesCount || 0}</p>
+                            <div class="payment-details">
+                                <p><strong>المبلغ الكامل:</strong> ${v.totalAmount || 0} د.أ</p>
+                                <p><strong>المدفوع:</strong> ${v.paidAmount || 0} د.أ</p>
+                                <p><strong>المتبقي:</strong> ${v.remainingAmount || 0} د.أ</p>
+                            </div>
+                            <button class="btn btn-sm btn-danger mt-2" onclick="window.deleteVisit('${key}')">حذف الزيارة</button>
+                        </div>
+                    </div>
+                </div>`;
+            }
+        });
+    }
+    html += '</div>';
+    document.getElementById('historyResult').innerHTML = found ? html : '<div class="alert alert-warning">❌ لا توجد زيارات سابقة</div>';
+};
+
+window.deleteVisit = async (id) => {
+    if (confirm('⚠️ هل أنت متأكد من الحذف؟')) {
+        await remove(ref(db, `visits/${id}`));
+        window.searchMedicalHistoryAutocomplete();
+        window.getFinancialReportAutocomplete();
     }
 };
 
-// استعادة البريد الإلكتروني المحفوظ
+window.deletePatient = async (id) => {
+    if (confirm('🚨 هل أنت متأكد من حذف المريض وكافة حركاته وزياراته؟')) {
+        await remove(ref(db, `patients/${id}`));
+        const snap = await get(ref(db, 'visits'));
+        if (snap.val()) {
+            for (const vid of Object.keys(snap.val())) {
+                if (snap.val()[vid].patientId === id) await remove(ref(db, `visits/${vid}`));
+            }
+        }
+    }
+};
+
+// ===================== معالجة دمج الحسابات المكررة =====================
+function initMergeAutocomplete() {
+    $("#mergeMainPatientSearch").autocomplete({
+        source: patientNamesList,
+        select: function(event, ui) {
+            document.getElementById('mergeMainPatientSearch').value = ui.item.value;
+            document.getElementById('mergeMainPatientId').value = ui.item.id;
+            document.getElementById('mergeMainPreview').innerHTML = `Selected Original ID: ${ui.item.id}`;
+            enableMergeButtonIfReady(); return false;
+        }
+    });
+    $("#mergeDuplicatePatientSearch").autocomplete({
+        source: patientNamesList,
+        select: function(event, ui) {
+            document.getElementById('mergeDuplicatePatientSearch').value = ui.item.value;
+            document.getElementById('mergeDuplicatePatientId').value = ui.item.id;
+            document.getElementById('mergeDuplicatePreview').innerHTML = `Will Merge & Delete ID: ${ui.item.id}`;
+            enableMergeButtonIfReady(); return false;
+        }
+    });
+}
+
+function enableMergeButtonIfReady() {
+    const m = document.getElementById('mergeMainPatientId').value;
+    const d = document.getElementById('mergeDuplicatePatientId').value;
+    document.getElementById('mergeBtn').disabled = !(m && d && m !== d);
+}
+
+window.clearMergeSelection = function() {
+    ["mergeMainPatientSearch", "mergeMainPatientId", "mergeDuplicatePatientSearch", "mergeDuplicatePatientId"].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('mergeMainPreview').innerHTML = '';
+    document.getElementById('mergeDuplicatePreview').innerHTML = '';
+    enableMergeButtonIfReady();
+};
+
+window.findDuplicatePatients = function() {
+    const duplicates = [];
+    const processed = new Set();
+    for (let i = 0; i < allPatients.length; i++) {
+        const p1 = allPatients[i]; if (processed.has(p1.id)) continue;
+        const similar = [p1];
+        for (let j = i + 1; j < allPatients.length; j++) {
+            const p2 = allPatients[j];
+            if ((p1.name?.trim() === p2.name?.trim()) || (p1.phone && p1.phone === p2.phone)) {
+                similar.push(p2); processed.add(p2.id);
+            }
+        }
+        if (similar.length > 1) duplicates.push(similar);
+        processed.add(p1.id);
+    }
+    
+    let html = '<ul>';
+    duplicates.forEach((g, idx) => {
+        html += `<li>Group ${idx+1}: ${g.map(p => p.name).join(' | ')} 
+        <button class="btn btn-xs btn-warning" onclick='window.mergeSelectedFromGroup(${idx}, ${JSON.stringify(g)}, this)'>دمج الحسابات</button></li>`;
+    });
+    html += '</ul>';
+    document.getElementById('duplicateSuggestionList').innerHTML = duplicates.length ? html : 'لا توجد تكرارات واضحة';
+};
+
+window.mergeSelectedFromGroup = async function(idx, group, btn) {
+    const main = group[0];
+    const dups = group.slice(1);
+    try {
+        const snap = await get(ref(db, 'visits'));
+        if (snap.val()) {
+            for (const [vid, vdata] of Object.entries(snap.val())) {
+                if (dups.some(d => d.id === vdata.patientId)) {
+                    await update(ref(db, `visits/${vid}`), { patientId: main.id, patientName: main.name });
+                }
+            }
+        }
+        for (const d of dups) { await remove(ref(db, `patients/${d.id}`)); }
+        alert('✅ تم الدمج بنجاح');
+        window.findDuplicatePatients();
+    } catch (e) { alert('خطأ في الدمج'); }
+};
+
+window.clearAllPatientsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'patients')); };
+window.clearAllVisitsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'visits')); };
+
+// استعادة البريد المحفوظ عند بدء التحميل
 window.addEventListener('DOMContentLoaded', () => {
-    const savedEmail = getSavedEmail();
-    if (savedEmail) {
-        const emailInput = document.getElementById('loginEmail');
-        const saveBtn = document.getElementById('saveEmailBtn');
-        if (emailInput) emailInput.value = savedEmail;
-        if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-check-circle"></i>';
+    if (getSavedEmail()) {
+        document.getElementById('loginEmail').value = getSavedEmail();
+        document.getElementById('saveEmailBtn').innerHTML = '<i class="fas fa-check-circle"></i>';
     }
 });
