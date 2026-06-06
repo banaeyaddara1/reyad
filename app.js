@@ -86,7 +86,6 @@ function applyPermissionsBasedOnRole() {
     }
 }
 
-//Local storage management
 function saveEmailToLocalStorage(email) { if (email) localStorage.setItem('savedEmail', email); }
 function getSavedEmail() { return localStorage.getItem('savedEmail') || ''; }
 
@@ -117,7 +116,7 @@ window.loginWithEmail = async function() {
 
 window.logoutUser = async function() { await signOut(auth); };
 
-// ===================== استرجاع وعرض بيانات المرضى وبناء الاستعلام الشامل =====================
+// ===================== استرجاع وعرض بيانات المرضى (الاستعلام الثلاثي الشامل) =====================
 function loadPatientsList() {
     onValue(ref(db, 'patients'), (snapshot) => {
         allPatients = [];
@@ -144,7 +143,7 @@ function displayPatientsList(searchTerm = '') {
     let filteredPatients = allPatients;
     if (searchTerm) {
         searchTerm = searchTerm.toLowerCase().trim();
-        // تعديل الاستعلام: البحث بالاسم أو الجوال أو العنوان
+        // الفلترة الشاملة: بحث بالاسم أو الجوال أو العنوان
         filteredPatients = allPatients.filter(p => 
             p.name?.toLowerCase().includes(searchTerm) || 
             p.phone?.toLowerCase().includes(searchTerm) || 
@@ -189,7 +188,7 @@ window.filterPatients = function() {
     displayPatientsList(document.getElementById('searchPatient').value);
 };
 
-// ===================== إضافة مريض جديد وسؤال المخدم لتسجيل زيارة =====================
+// ===================== إضافة مريض جديد والتحويل المباشر لصفحة الزيارات =====================
 window.addPatient = async function() {
     const name = document.getElementById('patientName').value.trim();
     const age = document.getElementById('patientAge').value.trim();
@@ -208,32 +207,28 @@ window.addPatient = async function() {
     try {
         await set(newPatientRef, patientData);
         
-        // تفريغ المدخلات بصفحة المرضى
         document.getElementById('patientName').value = '';
         document.getElementById('patientAge').value = '';
         document.getElementById('patientPhone').value = '';
         document.getElementById('patientAddress').value = '';
         
-        // مربع الخيارين: تسجيل زيارة أم لا
         if (confirm('✅ تم حفظ المريض بنجاح!\n\nهل تريد تسجيل زيارة جديدة لهذا المريض الآن؟')) {
-            // 1. تعبئة بيانات المريض تلقائياً في صفحة إدخال الزيارة
             document.getElementById('patientSearchInput').value = name;
             document.getElementById('selectedPatientId').value = targetId;
             
-            // 2. تفعيل وتحويل المستخدم مباشرة لتبويب الزيارات
             const visitsTabButton = document.getElementById('visits-tab');
             if (visitsTabButton) {
                 bootstrap.Tab.getInstance(visitsTabButton)?.show() || new bootstrap.Tab(visitsTabButton).show();
             }
         } else {
-            alert('✅ تم حفظ المريض المضاف بنجاح بقائمة ملفات العيادة.');
+            alert('✅ تم حفظ ملف المريض بنجاح بقائمة العيادة.');
         }
     } catch (error) {
         alert('❌ حدث خطأ أثناء عملية الحفظ');
     }
 };
 
-// ===================== التقارير المالية المتطورة المحدثة =====================
+// ===================== التقارير المالية المتطورة والمصححة حسابياً =====================
 window.getFinancialReportAutocomplete = async () => {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -274,19 +269,21 @@ window.getFinancialReportAutocomplete = async () => {
                 filteredVisits.push(v);
                 totalAmountSum += parseFloat(v.totalAmount) || 0;
                 paidAmountSum += parseFloat(v.paidAmount) || 0;
-                remainingAmountSum += parseFloat(v.remainingAmount) || 0;
             }
         }
     }
     
-    // ترتيب الحسابات والزيارات حسب الـ Timestamp من الأحدث للأقدم أو العكس
+    // المعادلة الحسابية الصافية لضمان دقة إشارة السالب والبلس
+    remainingAmountSum = totalAmountSum - paidAmountSum;
+    
+    // ترتيب الحركات المالية تنازلياً حسب الوقت والتاريخ
     filteredVisits.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     
     let html = '';
     const collectionRate = totalAmountSum > 0 ? Math.round((paidAmountSum / totalAmountSum) * 100) : 0;
     
     if (patientId || patientName) {
-        // حالة اختيار مريض معين (عرض الكشف التفصيلي له)
+        // كشف حساب تفصيلي لمريض محدد
         if (filteredVisits.length > 0) {
             const targetId = patientId || filteredVisits[0].patientId;
             const patientObj = allPatients.find(p => p.id === targetId) || { name: filteredVisits[0].patientName };
@@ -321,26 +318,26 @@ window.getFinancialReportAutocomplete = async () => {
                 </tr>`;
             }
             html += `</tbody>
-                    <tfoot class="table-info">
+                    <tfoot class="table-info text-dark">
                         <tr><td colspan="4"><strong>الإجمالي</strong></td>
-                        <td><strong>${totalAmountSum} د.أ</strong></td>
-                        <td><strong>${paidAmountSum} د.أ</strong></td>
-                        <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
+                        <td><strong>${totalAmountSum.toFixed(2)} د.أ</strong></td>
+                        <td><strong>${paidAmountSum.toFixed(2)} د.أ</strong></td>
+                        <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum.toFixed(2)} د.أ</strong></td>
                     </tr></tfoot></table></div></div>`;
         } else {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
         }
     } else {
-        // [تعديل] حالة عدم اختيار مريض معين (عرض الكشف العام الشامل على شكل جدول تفصيلي حسب التاريخ)
+        // التقرير العام الشامل: يعرض جدولاً تفصيلياً كاملاً للمرضى والحركات المالية بالفترات مرتبة بالتاريخ
         if (filteredVisits.length > 0) {
             html = `
                 <div class="animate__animated animate__fadeIn">
                     <div class="total-box mb-4">
                         <h4><i class="fas fa-chart-line"></i> ملخص الإيرادات العامة للفترة</h4>
                         <div class="row mt-4">
-                            <div class="col-md-4"><h3>الإيرادات: ${totalAmountSum} د.أ</h3></div>
-                            <div class="col-md-4"><h3>المدفوع: ${paidAmountSum} د.أ</h3></div>
-                            <div class="col-md-4"><h3>المتبقي: <span class="${remainingAmountSum < 0 ? 'text-danger':''}">${remainingAmountSum} د.أ</span></h3></div>
+                            <div class="col-md-4"><h3>الإيرادات: ${totalAmountSum.toFixed(2)} د.أ</h3></div>
+                            <div class="col-md-4"><h3>المدفوع: ${paidAmountSum.toFixed(2)} د.أ</h3></div>
+                            <div class="col-md-4"><h3>المتبقي الإجمالي: <span class="${remainingAmountSum < 0 ? 'text-danger':'text-success'}">${remainingAmountSum.toFixed(2)} د.أ</span></h3></div>
                         </div>
                         <div class="custom-progress mt-3"><div class="custom-progress-bar" style="width: ${collectionRate}%;">${collectionRate}% نسبة التحصيل</div></div>
                     </div>
@@ -360,13 +357,15 @@ window.getFinancialReportAutocomplete = async () => {
                             <tbody>`;
             
             for (const v of filteredVisits) {
+                // حساب متبقي الحركة الفردية لإظهار لونه حسب حالته (سالب أو موجب)
+                const currentRemaining = (parseFloat(v.totalAmount) || 0) - (parseFloat(v.paidAmount) || 0);
                 html += `
                     <tr>
                         <td>${v.date || '-'} ${v.time ? `<small class="text-muted">(${v.time})</small>` : ''}</td>
                         <td><strong>${v.patientName || 'مريض غير معروف'}</strong></td>
                         <td class="text-primary fw-bold">${v.totalAmount || 0}</td>
                         <td class="text-success fw-bold">${v.paidAmount || 0}</td>
-                        <td class="${v.remainingAmount < 0 ? 'text-danger' : 'text-success'} fw-bold">${v.remainingAmount || 0}</td>
+                        <td class="${currentRemaining < 0 ? 'text-danger' : 'text-success'} fw-bold">${currentRemaining}</td>
                     </tr>`;
             }
             
@@ -375,9 +374,9 @@ window.getFinancialReportAutocomplete = async () => {
                             <tfoot class="table-warning text-dark">
                                 <tr>
                                     <td colspan="2"><strong>المجموع الكلي للحركات المالية</strong></td>
-                                    <td><strong>${totalAmountSum} د.أ</strong></td>
-                                    <td><strong>${paidAmountSum} د.أ</strong></td>
-                                    <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum} د.أ</strong></td>
+                                    <td><strong>${totalAmountSum.toFixed(2)} د.أ</strong></td>
+                                    <td><strong>${paidAmountSum.toFixed(2)} د.أ</strong></td>
+                                    <td><strong class="${remainingAmountSum < 0 ? 'text-danger' : 'text-success'}">${remainingAmountSum.toFixed(2)} د.أ</strong></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -390,7 +389,7 @@ window.getFinancialReportAutocomplete = async () => {
     document.getElementById('financeResult').innerHTML = html;
 };
 
-// ===================== بقية الوظائف المساعدة وتعديل وحذف السجلات =====================
+// ===================== بقية وظائف النظام المساعدة =====================
 window.openEditPatientModal = function(id, name, age, phone, address) {
     document.getElementById('editPatientId').value = id;
     document.getElementById('editPatientName').value = name;
@@ -519,7 +518,7 @@ window.deletePatient = async (id) => {
     }
 };
 
-// ===================== معالجة دمج الحسابات المكررة =====================
+// ===================== معالجة دمج الحسابات المكررة والمقترحات =====================
 function initMergeAutocomplete() {
     $("#mergeMainPatientSearch").autocomplete({
         source: patientNamesList,
@@ -600,7 +599,7 @@ window.mergeSelectedFromGroup = async function(idx, group, btn) {
 window.clearAllPatientsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'patients')); };
 window.clearAllVisitsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'visits')); };
 
-// استعادة البريد المحفوظ عند بدء التحميل
+// استعادة البريد الإلكتروني المحفوظ عند بدء التحميل
 window.addEventListener('DOMContentLoaded', () => {
     if (getSavedEmail()) {
         document.getElementById('loginEmail').value = getSavedEmail();
