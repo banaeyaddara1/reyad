@@ -830,7 +830,43 @@ window.findDuplicatePatients = async function() {
         visitTotalMap[v.patientId] = (visitTotalMap[v.patientId] || 0) + (parseFloat(v.totalAmount) || 0);
     }
 
-    // إيجاد مجموعات المكررين (تشابه الاسم أو رقم الجوال)
+    // ======= خوارزمية قياس التشابه بين نصين =======
+    // تحويل الحروف العربية المتشابهة لصورة موحدة
+    function normalizeAr(str) {
+        if (!str) return '';
+        return str.trim()
+            .replace(/أ|إ|آ/g, 'ا')   // توحيد الألف
+            .replace(/ة/g, 'ه')        // ة → ه
+            .replace(/ى/g, 'ي')        // ى → ي
+            .replace(/\s+/g, ' ')       // مسافات متعددة → مسافة واحدة
+            .toLowerCase();
+    }
+
+    // حساب نسبة التشابه بين نصين (Dice Coefficient على bigrams)
+    function similarity(a, b) {
+        a = normalizeAr(a);
+        b = normalizeAr(b);
+        if (a === b) return 1;
+        if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+        const getBigrams = s => {
+            const bg = new Map();
+            for (let i = 0; i < s.length - 1; i++) {
+                const bi = s.slice(i, i + 2);
+                bg.set(bi, (bg.get(bi) || 0) + 1);
+            }
+            return bg;
+        };
+        const aB = getBigrams(a), bB = getBigrams(b);
+        let intersection = 0;
+        for (const [bi, cnt] of aB) {
+            intersection += Math.min(cnt, bB.get(bi) || 0);
+        }
+        return (2 * intersection) / (a.length - 1 + b.length - 1);
+    }
+
+    // إيجاد مجموعات المكررين
+    // معيار التشابه: تطابق تام أو تشابه ≥ 75% أو رقم جوال مشترك
+    const SIMILARITY_THRESHOLD = 0.75;
     const duplicates = [];
     const processed  = new Set();
     for (let i = 0; i < allPatients.length; i++) {
@@ -840,10 +876,13 @@ window.findDuplicatePatients = async function() {
         for (let j = i + 1; j < allPatients.length; j++) {
             const p2 = allPatients[j];
             if (processed.has(p2.id)) continue;
-            const nameMatch  = p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase();
+            const nameSim    = similarity(p1.name, p2.name);
             const phoneMatch = p1.phone && p2.phone &&
                                p1.phone.replace(/\s/g,'') === p2.phone.replace(/\s/g,'');
-            if (nameMatch || phoneMatch) { similar.push(p2); processed.add(p2.id); }
+            if (nameSim >= SIMILARITY_THRESHOLD || phoneMatch) {
+                similar.push(p2);
+                processed.add(p2.id);
+            }
         }
         if (similar.length > 1) duplicates.push(similar);
         processed.add(p1.id);
@@ -864,9 +903,13 @@ window.findDuplicatePatients = async function() {
 
     duplicates.forEach((group, idx) => {
         const gid = `dup_${idx}`;
-        // حساب إجمالي الزيارات والمبالغ للمجموعة كلها
         const groupVisits = group.reduce((s, p) => s + (visitCountMap[p.id] || 0), 0);
         const groupTotal  = group.reduce((s, p) => s + (visitTotalMap[p.id]  || 0), 0);
+        // نسبة التشابه بين أول اسمين في المجموعة
+        const simPct = group.length >= 2
+            ? Math.round(similarity(group[0].name, group[1].name) * 100)
+            : 100;
+        const simColor = simPct === 100 ? 'bg-danger' : simPct >= 85 ? 'bg-warning text-dark' : 'bg-info text-dark';
 
         html += `
         <div class="card mb-3 border-warning shadow-sm" id="card_${gid}">
@@ -875,7 +918,8 @@ window.findDuplicatePatients = async function() {
                 <span class="fw-bold">
                     <i class="fas fa-clone"></i> مجموعة #${idx + 1}
                     &nbsp;|&nbsp; ${group.length} سجلات
-                    &nbsp;|&nbsp; <i class="fas fa-stethoscope"></i> ${groupVisits} زيارة إجمالية
+                    &nbsp;|&nbsp; <span class="badge ${simColor}">تشابه ${simPct}%</span>
+                    &nbsp;|&nbsp; <i class="fas fa-stethoscope"></i> ${groupVisits} زيارة
                     &nbsp;|&nbsp; <i class="fas fa-coins"></i> ${groupTotal.toFixed(2)} د.أ
                 </span>
                 <button class="btn btn-danger btn-sm"
