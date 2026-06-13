@@ -240,31 +240,64 @@ window.getFinancialReportAutocomplete = async () => {
     
     let totalAmountSum = 0, paidAmountSum = 0, remainingAmountSum = 0;
     let filteredVisits = [];
+
+    // دالة مساعدة: تحويل الأرقام العربية/الهندية إلى إنجليزية
+    function toEnglishDigits(str) {
+        if (!str) return str;
+        return String(str)
+            .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632)
+            .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776);
+    }
+
+    // دالة مساعدة: تحويل تاريخ الزيارة المخزن (d/m/yyyy) إلى كائن Date
+    function parseVisitDate(dateStr) {
+        if (!dateStr) return null;
+        const normalized = toEnglishDigits(dateStr).trim();
+        // دعم الصيغتين: d/m/yyyy و yyyy-mm-dd
+        if (normalized.includes('/')) {
+            const parts = normalized.split('/');
+            if (parts.length === 3) {
+                const day   = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const year  = parseInt(parts[2], 10);
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                    return new Date(year, month, day);
+                }
+            }
+        } else if (normalized.includes('-')) {
+            const d = new Date(normalized);
+            if (!isNaN(d)) return d;
+        }
+        return null;
+    }
     
     if (visits) {
         for (const key of Object.keys(visits)) {
             const v = visits[key];
-            let visitDate = null;
-            if (v.date) {
-                const parts = v.date.split('/');
-                if (parts.length === 3) visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
+
+            // محاولة بناء التاريخ من حقل date أولاً، ثم timestamp كاحتياط
+            let visitDate = parseVisitDate(v.date);
+            if (!visitDate && v.timestamp) {
+                visitDate = new Date(v.timestamp);
+                visitDate.setHours(0, 0, 0, 0);
             }
             
             let start = startDate ? new Date(startDate) : null;
-            let end = endDate ? new Date(endDate) : null;
-            if(start) start.setHours(0,0,0,0);
-            if(end) end.setHours(23,59,59,999);
+            let end   = endDate   ? new Date(endDate)   : null;
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end)   end.setHours(23, 59, 59, 999);
             
-            // إذا لم يتم تحديد أي تواريخ نعرض كافة الحركات
             let inRange = true;
-            if (!start && !end) {
-                inRange = true; // لا يوجد فلتر تاريخ - عرض الكل
-            } else if (visitDate) {
-                if (start && visitDate < start) inRange = false;
-                if (end && visitDate > end) inRange = false;
-            } else {
-                inRange = false; // لا يوجد تاريخ للزيارة
+            if (start || end) {
+                // يوجد فلتر تاريخ → التحقق من النطاق
+                if (!visitDate) {
+                    inRange = false; // لا يمكن تحديد تاريخ الزيارة
+                } else {
+                    if (start && visitDate < start) inRange = false;
+                    if (end   && visitDate > end)   inRange = false;
+                }
             }
+            // إذا لم يُحدَّد أي تاريخ → inRange يبقى true (عرض الكل)
             
             let patientMatch = true;
             if (patientId) { patientMatch = (patientId === v.patientId); }
@@ -273,7 +306,7 @@ window.getFinancialReportAutocomplete = async () => {
             if (inRange && patientMatch) {
                 filteredVisits.push(v);
                 totalAmountSum += parseFloat(v.totalAmount) || 0;
-                paidAmountSum += parseFloat(v.paidAmount) || 0;
+                paidAmountSum  += parseFloat(v.paidAmount)  || 0;
             }
         }
     }
@@ -406,27 +439,43 @@ window.exportFinancialReportToExcel = async function() {
     let filteredVisits = [];
     let totalAmountSum = 0, paidAmountSum = 0;
 
+    function toEnglishDigits(str) {
+        if (!str) return str;
+        return String(str)
+            .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632)
+            .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776);
+    }
+    function parseVisitDate(dateStr) {
+        if (!dateStr) return null;
+        const normalized = toEnglishDigits(dateStr).trim();
+        if (normalized.includes('/')) {
+            const parts = normalized.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10), month = parseInt(parts[1], 10) - 1, year = parseInt(parts[2], 10);
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) return new Date(year, month, day);
+            }
+        } else if (normalized.includes('-')) { const d = new Date(normalized); if (!isNaN(d)) return d; }
+        return null;
+    }
+
     if (visits) {
         for (const key of Object.keys(visits)) {
             const v = visits[key];
-            let visitDate = null;
-            if (v.date) {
-                const parts = v.date.split('/');
-                if (parts.length === 3) visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
-            }
+            let visitDate = parseVisitDate(v.date);
+            if (!visitDate && v.timestamp) { visitDate = new Date(v.timestamp); visitDate.setHours(0,0,0,0); }
+
             let start = startDate ? new Date(startDate) : null;
-            let end = endDate ? new Date(endDate) : null;
-            if(start) start.setHours(0,0,0,0);
-            if(end) end.setHours(23,59,59,999);
+            let end   = endDate   ? new Date(endDate)   : null;
+            if (start) start.setHours(0, 0, 0, 0);
+            if (end)   end.setHours(23, 59, 59, 999);
 
             let inRange = true;
-            if (!start && !end) {
-                inRange = true;
-            } else if (visitDate) {
-                if (start && visitDate < start) inRange = false;
-                if (end && visitDate > end) inRange = false;
-            } else {
-                inRange = false;
+            if (start || end) {
+                if (!visitDate) { inRange = false; }
+                else {
+                    if (start && visitDate < start) inRange = false;
+                    if (end   && visitDate > end)   inRange = false;
+                }
             }
 
             let patientMatch = true;
@@ -436,7 +485,7 @@ window.exportFinancialReportToExcel = async function() {
             if (inRange && patientMatch) {
                 filteredVisits.push({ id: key, ...v });
                 totalAmountSum += parseFloat(v.totalAmount) || 0;
-                paidAmountSum += parseFloat(v.paidAmount) || 0;
+                paidAmountSum  += parseFloat(v.paidAmount)  || 0;
             }
         }
     }
@@ -515,25 +564,42 @@ window.exportFullBackup = async function() {
     const patients = patientsSnap.val() || {};
     const allVisits = visitsSnap.val() || {};
 
+    function toEnglishDigits(str) {
+        if (!str) return str;
+        return String(str)
+            .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632)
+            .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776);
+    }
+    function parseVisitDate(dateStr) {
+        if (!dateStr) return null;
+        const normalized = toEnglishDigits(dateStr).trim();
+        if (normalized.includes('/')) {
+            const parts = normalized.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10), month = parseInt(parts[1], 10) - 1, year = parseInt(parts[2], 10);
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) return new Date(year, month, day);
+            }
+        } else if (normalized.includes('-')) { const d = new Date(normalized); if (!isNaN(d)) return d; }
+        return null;
+    }
+
     // فلترة الزيارات حسب التاريخ إن وجد
     let filteredVisits = {};
     for (const [key, v] of Object.entries(allVisits)) {
-        let visitDate = null;
-        if (v.date) {
-            const parts = v.date.split('/');
-            if (parts.length === 3) visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        }
+        let visitDate = parseVisitDate(v.date);
+        if (!visitDate && v.timestamp) { visitDate = new Date(v.timestamp); visitDate.setHours(0,0,0,0); }
+
         let start = startDate ? new Date(startDate) : null;
-        let end = endDate ? new Date(endDate) : null;
-        if(start) start.setHours(0,0,0,0);
-        if(end) end.setHours(23,59,59,999);
+        let end   = endDate   ? new Date(endDate)   : null;
+        if (start) start.setHours(0, 0, 0, 0);
+        if (end)   end.setHours(23, 59, 59, 999);
 
         let inRange = true;
         if (start || end) {
             if (!visitDate) { inRange = false; }
             else {
                 if (start && visitDate < start) inRange = false;
-                if (end && visitDate > end) inRange = false;
+                if (end   && visitDate > end)   inRange = false;
             }
         }
         if (inRange) filteredVisits[key] = v;
