@@ -32,7 +32,7 @@ function isCurrentUserAdmin() {
     return currentUser && ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim());
 }
 
-// ===================== مراقبة حالة تسجيل الدخول =====================
+// ===================== مراقبة حالة تسجيل الدخول الأمنة =====================
 onAuthStateChanged(auth, (user) => {
     const loginContainer = document.getElementById('loginContainer');
     const appContent     = document.getElementById('appContent');
@@ -41,10 +41,10 @@ onAuthStateChanged(auth, (user) => {
     const tabs           = document.querySelector('.nav-tabs');
     const tabContent     = document.querySelector('.tab-content');
 
-    if (user) {
+    if (user && ADMIN_EMAILS.includes(user.email.toLowerCase().trim())) {
         currentUser = user;
 
-        // إظهار المحتوى فقط بعد تأكيد Firebase بنجاح
+        // إظهار المحتوى فقط بعد تأكيد الهوية والصلاحية بنجاح
         [appContent, topButtons, welcomeMessage, tabs, tabContent, loginContainer].forEach(el => {
             if (el) el.classList.add('auth-ok');
         });
@@ -55,9 +55,10 @@ onAuthStateChanged(auth, (user) => {
         applyPermissionsBasedOnRole();
         loadPatientsList();
     } else {
+        // حماية صارمة: إذا فتح الرابط مستخدم غير مسجل أو لا يملك صلاحية أدمن يتم تدمير الجلسة فوراً وإجباره على شاشة الدخول
         currentUser = null;
+        if (user) signOut(auth);
 
-        // إخفاء كل المحتوى وعرض شاشة الدخول
         [appContent, topButtons, welcomeMessage, tabs, tabContent, loginContainer].forEach(el => {
             if (el) el.classList.remove('auth-ok');
         });
@@ -104,13 +105,13 @@ window.loginWithEmail = async function() {
         messageDiv.textContent = '⏳ جاري تسجيل الدخول...';
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-        messageDiv.textContent = '❌ خطأ في عملية تسجيل الدخول';
+        messageDiv.textContent = '❌ خطأ في عملية تسجيل الدخول أو عدم امتلاك صلاحية دخول';
     }
 };
 
 window.logoutUser = async function() { await signOut(auth); };
 
-// ===================== استرجاع وعرض بيانات المرضى (الاستعلام الثلاثي الشامل) =====================
+// ===================== استرجاع وعرض بيانات المرضى =====================
 function loadPatientsList() {
     onValue(ref(db, 'patients'), (snapshot) => {
         allPatients = [];
@@ -137,7 +138,6 @@ function displayPatientsList(searchTerm = '') {
     let filteredPatients = allPatients;
     if (searchTerm) {
         searchTerm = searchTerm.toLowerCase().trim();
-        // الفلترة الشاملة: بحث بالاسم أو الجوال أو العنوان
         filteredPatients = allPatients.filter(p => 
             p.name?.toLowerCase().includes(searchTerm) || 
             p.phone?.toLowerCase().includes(searchTerm) || 
@@ -235,7 +235,6 @@ window.getFinancialReportAutocomplete = async () => {
     let totalAmountSum = 0, paidAmountSum = 0, remainingAmountSum = 0;
     let filteredVisits = [];
 
-    // دالة مساعدة: تحويل الأرقام العربية/الهندية إلى إنجليزية
     function toEnglishDigits(str) {
         if (!str) return str;
         return String(str)
@@ -243,11 +242,9 @@ window.getFinancialReportAutocomplete = async () => {
             .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776);
     }
 
-    // دالة مساعدة: تحويل تاريخ الزيارة المخزن (d/m/yyyy) إلى كائن Date
     function parseVisitDate(dateStr) {
         if (!dateStr) return null;
         const normalized = toEnglishDigits(dateStr).trim();
-        // دعم الصيغتين: d/m/yyyy و yyyy-mm-dd
         if (normalized.includes('/')) {
             const parts = normalized.split('/');
             if (parts.length === 3) {
@@ -269,7 +266,6 @@ window.getFinancialReportAutocomplete = async () => {
         for (const key of Object.keys(visits)) {
             const v = visits[key];
 
-            // محاولة بناء التاريخ من حقل date أولاً، ثم timestamp كاحتياط
             let visitDate = parseVisitDate(v.date);
             if (!visitDate && v.timestamp) {
                 visitDate = new Date(v.timestamp);
@@ -283,15 +279,13 @@ window.getFinancialReportAutocomplete = async () => {
             
             let inRange = true;
             if (start || end) {
-                // يوجد فلتر تاريخ → التحقق من النطاق
                 if (!visitDate) {
-                    inRange = false; // لا يمكن تحديد تاريخ الزيارة
+                    inRange = false;
                 } else {
                     if (start && visitDate < start) inRange = false;
                     if (end   && visitDate > end)   inRange = false;
                 }
             }
-            // إذا لم يُحدَّد أي تاريخ → inRange يبقى true (عرض الكل)
             
             let patientMatch = true;
             if (patientId) { patientMatch = (patientId === v.patientId); }
@@ -305,17 +299,13 @@ window.getFinancialReportAutocomplete = async () => {
         }
     }
     
-    // المعادلة الحسابية الصافية لضمان دقة إشارة السالب والبلس
     remainingAmountSum = totalAmountSum - paidAmountSum;
-    
-    // ترتيب الحركات المالية تنازلياً حسب الوقت والتاريخ
     filteredVisits.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     
     let html = '';
     const collectionRate = totalAmountSum > 0 ? Math.round((paidAmountSum / totalAmountSum) * 100) : 0;
     
     if (patientId || patientName) {
-        // كشف حساب تفصيلي لمريض محدد
         if (filteredVisits.length > 0) {
             const targetId = patientId || filteredVisits[0].patientId;
             const patientObj = allPatients.find(p => p.id === targetId) || { name: filteredVisits[0].patientName };
@@ -360,7 +350,6 @@ window.getFinancialReportAutocomplete = async () => {
             html = '<div class="alert alert-warning">❌ لا توجد زيارات لهذا المريض في الفترة المحددة</div>';
         }
     } else {
-        // التقرير العام الشامل: يعرض جدولاً تفصيلياً كاملاً للمرضى والحركات المالية بالفترات مرتبة بالتاريخ
         if (filteredVisits.length > 0) {
             html = `
                 <div class="animate__animated animate__fadeIn">
@@ -389,7 +378,6 @@ window.getFinancialReportAutocomplete = async () => {
                             <tbody>`;
             
             for (const v of filteredVisits) {
-                // حساب متبقي الحركة الفردية لإظهار لونه حسب حالته (سالب أو موجب)
                 const currentRemaining = (parseFloat(v.totalAmount) || 0) - (parseFloat(v.paidAmount) || 0);
                 html += `
                     <tr>
@@ -495,7 +483,6 @@ window.exportFinancialReportToExcel = async function() {
     const periodLabel = startDate && endDate ? `من ${startDate} إلى ${endDate}` : (startDate ? `من ${startDate}` : (endDate ? `إلى ${endDate}` : 'كافة الفترات'));
     const patientLabel = patientName || 'جميع المرضى';
 
-    // بيانات الشيت
     const wsData = [
         ['التقرير المالي - صيدلية فراس'],
         [`الفترة: ${periodLabel}`],
@@ -527,11 +514,9 @@ window.exportFinancialReportToExcel = async function() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // تنسيق عرض الأعمدة
     ws['!cols'] = [
         {wch:5},{wch:14},{wch:12},{wch:22},{wch:28},{wch:28},{wch:10},{wch:16},{wch:14},{wch:14}
     ];
-    // دمج خلايا العنوان
     ws['!merges'] = [
         {s:{r:0,c:0}, e:{r:0,c:9}},
         {s:{r:1,c:0}, e:{r:1,c:9}},
@@ -545,7 +530,7 @@ window.exportFinancialReportToExcel = async function() {
     alert(`✅ تم تصدير التقرير المالي بنجاح!\n📄 ${filteredVisits.length} حركة مالية`);
 };
 
-// ===================== تصدير نسخة احتياطية شاملة (باك أب كامل) =====================
+// ===================== تصدير نسخة احتياطية شاملة =====================
 window.exportFullBackup = async function() {
     const startDate = document.getElementById('exportStartDate').value;
     const endDate = document.getElementById('exportEndDate').value;
@@ -562,7 +547,7 @@ window.exportFullBackup = async function() {
         if (!str) return str;
         return String(str)
             .replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => d.charCodeAt(0) - 1632)
-            .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, d => d.charCodeAt(0) - 1776);
+            .replace(/[۰۱۲۳۴۵۶٧٨٩]/g, d => d.charCodeAt(0) - 1776);
     }
     function parseVisitDate(dateStr) {
         if (!dateStr) return null;
@@ -577,7 +562,6 @@ window.exportFullBackup = async function() {
         return null;
     }
 
-    // فلترة الزيارات حسب التاريخ إن وجد
     let filteredVisits = {};
     for (const [key, v] of Object.entries(allVisits)) {
         let visitDate = parseVisitDate(v.date);
@@ -601,7 +585,6 @@ window.exportFullBackup = async function() {
 
     const wb = XLSX.utils.book_new();
 
-    // شيت 1: المرضى
     const patientsData = [['#', 'الاسم', 'العمر', 'رقم الجوال', 'العنوان', 'تاريخ التسجيل', 'Firebase ID']];
     let idx = 1;
     for (const [id, p] of Object.entries(patients)) {
@@ -611,7 +594,6 @@ window.exportFullBackup = async function() {
     wsPatients['!cols'] = [{wch:5},{wch:25},{wch:8},{wch:16},{wch:22},{wch:16},{wch:30}];
     XLSX.utils.book_append_sheet(wb, wsPatients, 'المرضى');
 
-    // شيت 2: الزيارات
     const visitsData = [['#', 'التاريخ', 'الوقت', 'المريض', 'التشخيص', 'العلاج', 'عدد العلب', 'المبلغ الكامل', 'المدفوع', 'المتبقي', 'Firebase ID']];
     const sortedVisits = Object.entries(filteredVisits).sort((a,b) => (b[1].timestamp||0)-(a[1].timestamp||0));
     let vi = 1;
@@ -623,7 +605,6 @@ window.exportFullBackup = async function() {
     wsVisits['!cols'] = [{wch:5},{wch:14},{wch:12},{wch:22},{wch:30},{wch:30},{wch:10},{wch:14},{wch:12},{wch:12},{wch:30}];
     XLSX.utils.book_append_sheet(wb, wsVisits, 'الزيارات');
 
-    // شيت 3: ملخص مالي
     let totalAmt = 0, totalPaid = 0;
     for (const v of Object.values(filteredVisits)) {
         totalAmt += parseFloat(v.totalAmount)||0;
@@ -780,14 +761,14 @@ window.deletePatient = async (id) => {
     }
 };
 
-// ===================== معالجة دمج الحسابات المكررة والمقترحات =====================
+// ===================== معالجة دمج الحسابات المكررة والمقترحات المحدثة =====================
 function initMergeAutocomplete() {
     $("#mergeMainPatientSearch").autocomplete({
         source: patientNamesList,
         select: function(event, ui) {
             document.getElementById('mergeMainPatientSearch').value = ui.item.value;
             document.getElementById('mergeMainPatientId').value = ui.item.id;
-            document.getElementById('mergeMainPreview').innerHTML = `Selected Original ID: ${ui.item.id}`;
+            document.getElementById('mergeMainPreview').innerHTML = `Original ID Selected: ${ui.item.id}`;
             enableMergeButtonIfReady(); return false;
         }
     });
@@ -796,7 +777,7 @@ function initMergeAutocomplete() {
         select: function(event, ui) {
             document.getElementById('mergeDuplicatePatientSearch').value = ui.item.value;
             document.getElementById('mergeDuplicatePatientId').value = ui.item.id;
-            document.getElementById('mergeDuplicatePreview').innerHTML = `Will Merge & Delete ID: ${ui.item.id}`;
+            document.getElementById('mergeDuplicatePreview').innerHTML = `Duplicate ID Selected: ${ui.item.id}`;
             enableMergeButtonIfReady(); return false;
         }
     });
@@ -817,69 +798,83 @@ window.clearMergeSelection = function() {
 
 window.findDuplicatePatients = async function() {
     const btn = document.querySelector('button[onclick="window.findDuplicatePatients()"]');
-    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البحث...'; btn.disabled = true; }
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الفحص المعمق...'; btn.disabled = true; }
 
-    // جلب إحصائيات الزيارات لكل مريض من Firebase
     const visitsSnap = await get(ref(db, 'visits'));
     const allVisits  = visitsSnap.val() || {};
-    const visitCountMap = {}; // patientId → عدد الزيارات
-    const visitTotalMap = {}; // patientId → مجموع المبالغ
+    const visitCountMap = {}; 
+    const visitTotalMap = {}; 
     for (const v of Object.values(allVisits)) {
         if (!v.patientId) continue;
         visitCountMap[v.patientId] = (visitCountMap[v.patientId] || 0) + 1;
         visitTotalMap[v.patientId] = (visitTotalMap[v.patientId] || 0) + (parseFloat(v.totalAmount) || 0);
     }
 
-    // ======= خوارزمية قياس التشابه بين نصين =======
-    // تحويل الحروف العربية المتشابهة لصورة موحدة
-    function normalizeAr(str) {
+    // تنظيف وتوحيد النصوص العربية لإحكام المطابقة والمقارنة
+    function normalizeArabicText(str) {
         if (!str) return '';
         return str.trim()
-            .replace(/أ|إ|آ/g, 'ا')   // توحيد الألف
-            .replace(/ة/g, 'ه')        // ة → ه
-            .replace(/ى/g, 'ي')        // ى → ي
-            .replace(/\s+/g, ' ')       // مسافات متعددة → مسافة واحدة
+            .replace(/أ|إ|آ/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .replace(/عبد /g, 'عبد') // توحيد إدخال المركبات مثل عبد الرحمن
+            .replace(/ال/g, '')     // إزالة ال التعريف لمطابقة الأسماء مثل (الخطيب / خطيب)
+            .replace(/\s+/g, '')    // إزالة الفراغات لربط المقاطع والتأكد من جذور الحروف
             .toLowerCase();
     }
 
-    // حساب نسبة التشابه بين نصين (Dice Coefficient على bigrams)
-    function similarity(a, b) {
-        a = normalizeAr(a);
-        b = normalizeAr(b);
-        if (a === b) return 1;
-        if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
-        const getBigrams = s => {
-            const bg = new Map();
-            for (let i = 0; i < s.length - 1; i++) {
-                const bi = s.slice(i, i + 2);
-                bg.set(bi, (bg.get(bi) || 0) + 1);
+    // خوارزمية ليفنشتاين المتقدمة لحساب المسافة الدقيقة والتعديلات بين الأسماء
+    function getLevenshteinDistance(a, b) {
+        const normA = normalizeArabicText(a);
+        const normB = normalizeArabicText(b);
+        
+        if (normA === normB) return 0;
+        if (normA.length === 0) return normB.length;
+        if (normB.length === 0) return normA.length;
+
+        const matrix = [];
+        for (let i = 0; i <= normB.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= normA.length; j++) matrix[0][j] = j;
+
+        for (let i = 1; i <= normB.length; i++) {
+            for (let j = 1; j <= normA.length; j++) {
+                if (normB.charAt(i - 1) === normA.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // استبدال
+                        Math.min(matrix[i][j - 1] + 1, // إضافة
+                        matrix[i - 1][j] + 1) // حذف
+                    );
+                }
             }
-            return bg;
-        };
-        const aB = getBigrams(a), bB = getBigrams(b);
-        let intersection = 0;
-        for (const [bi, cnt] of aB) {
-            intersection += Math.min(cnt, bB.get(bi) || 0);
         }
-        return (2 * intersection) / (a.length - 1 + b.length - 1);
+        return matrix[normB.length][normA.length];
     }
 
-    // إيجاد مجموعات المكررين
-    // معيار التشابه: تطابق تام أو تشابه ≥ 75% أو رقم جوال مشترك
-    const SIMILARITY_THRESHOLD = 0.75;
     const duplicates = [];
     const processed  = new Set();
+
     for (let i = 0; i < allPatients.length; i++) {
         const p1 = allPatients[i];
         if (processed.has(p1.id)) continue;
         const similar = [p1];
+
         for (let j = i + 1; j < allPatients.length; j++) {
             const p2 = allPatients[j];
             if (processed.has(p2.id)) continue;
-            const nameSim    = similarity(p1.name, p2.name);
+
+            const editDistance = getLevenshteinDistance(p1.name, p2.name);
+            const maxLen = Math.max(normalizeArabicText(p1.name).length, normalizeArabicText(p2.name).length);
+            
+            // حساب النسبة المئوية للتشابه الفعلي بناءً على طول الكلمة ومسافة التعديل
+            const similarityPercentage = maxLen > 0 ? ((maxLen - editDistance) / maxLen) : 0;
+
             const phoneMatch = p1.phone && p2.phone &&
                                p1.phone.replace(/\s/g,'') === p2.phone.replace(/\s/g,'');
-            if (nameSim >= SIMILARITY_THRESHOLD || phoneMatch) {
+
+            // إذا كانت نسبة التشابه الفعلي مذهلة (أعلى من 68% بعد الفلترة العميقة لجذور الكلمات) أو تطابق الهاتف
+            if (similarityPercentage >= 0.68 || phoneMatch) {
                 similar.push(p2);
                 processed.add(p2.id);
             }
@@ -892,23 +887,26 @@ window.findDuplicatePatients = async function() {
 
     if (duplicates.length === 0) {
         document.getElementById('duplicateSuggestionList').innerHTML =
-            '<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> ✅ لا توجد أسماء مكررة في قائمة المرضى</div>';
+            '<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> ✅ تم الفحص بنجاح: لا توجد أي أسماء مكررة أو متشابهة في النظام حالياً.</div>';
         return;
     }
 
     let html = `<div class="alert alert-warning mb-3 py-2">
         <i class="fas fa-exclamation-triangle"></i> 
-        وُجد <strong>${duplicates.length}</strong> مجموعة مكررة محتملة — اختر الاسم المعتمد لكل مجموعة ثم اضغط دمج
+        تم رصد <strong>${duplicates.length}</strong> مجموعة حسابات مكررة ومتقاربة — الرجاء مراجعتها واختيار السجل المعتمد للدمج الفوري.
     </div>`;
 
     duplicates.forEach((group, idx) => {
         const gid = `dup_${idx}`;
         const groupVisits = group.reduce((s, p) => s + (visitCountMap[p.id] || 0), 0);
         const groupTotal  = group.reduce((s, p) => s + (visitTotalMap[p.id]  || 0), 0);
-        // نسبة التشابه بين أول اسمين في المجموعة
-        const simPct = group.length >= 2
-            ? Math.round(similarity(group[0].name, group[1].name) * 100)
-            : 100;
+        
+        const clean1 = normalizeArabicText(group[0].name);
+        const clean2 = normalizeArabicText(group[1].name);
+        const dist = getLevenshteinDistance(group[0].name, group[1].name);
+        const mxL = Math.max(clean1.length, clean2.length);
+        const simPct = mxL > 0 ? Math.round(((mxL - dist) / mxL) * 100) : 100;
+
         const simColor = simPct === 100 ? 'bg-danger' : simPct >= 85 ? 'bg-warning text-dark' : 'bg-info text-dark';
 
         html += `
@@ -918,19 +916,19 @@ window.findDuplicatePatients = async function() {
                 <span class="fw-bold">
                     <i class="fas fa-clone"></i> مجموعة #${idx + 1}
                     &nbsp;|&nbsp; ${group.length} سجلات
-                    &nbsp;|&nbsp; <span class="badge ${simColor}">تشابه ${simPct}%</span>
-                    &nbsp;|&nbsp; <i class="fas fa-stethoscope"></i> ${groupVisits} زيارة
+                    &nbsp;|&nbsp; <span class="badge ${simColor}">نسبة التطابق الذكي ${simPct}%</span>
+                    &nbsp;|&nbsp; <i class="fas fa-stethoscope"></i> ${groupVisits} زيارة متراكمة
                     &nbsp;|&nbsp; <i class="fas fa-coins"></i> ${groupTotal.toFixed(2)} د.أ
                 </span>
                 <button class="btn btn-danger btn-sm"
                         onclick="window.executeMerge('${gid}', [${group.map(p=>`'${p.id}'`).join(',')}])">
-                    <i class="fas fa-code-branch"></i> دمج الآن
+                    <i class="fas fa-code-branch"></i> دمج المجموعة الآن
                 </button>
             </div>
             <div class="card-body pb-2 pt-3">
                 <p class="text-muted small mb-2">
                     <i class="fas fa-hand-pointer"></i>
-                    اختر الاسم <strong>المعتمد</strong> (ستُنقل إليه كل الزيارات وتُحذف السجلات الأخرى):
+                    حدد الملف **الرئيسي المعتمد** للعيادة (سيتم ترحيل كافة السجلات المكررة والزيارات والبيانات المالية والتقارير إليه وحذف الهويات الأخرى تلقائياً):
                 </p>`;
 
         group.forEach((p, pi) => {
@@ -965,7 +963,6 @@ window.findDuplicatePatients = async function() {
     document.getElementById('duplicateSuggestionList').innerHTML = html;
 };
 
-// تظليل الصف المختار داخل المجموعة
 window.highlightSelected = function(gid) {
     document.querySelectorAll(`.dup-row-${gid}`).forEach(el => {
         el.classList.remove('border-success', 'border-2', 'bg-success', 'bg-opacity-10');
@@ -981,7 +978,6 @@ window.highlightSelected = function(gid) {
     }
 };
 
-// تنفيذ الدمج الفعلي
 window.executeMerge = async function(gid, patientIds) {
     const selectedRadio = document.querySelector(`[name="master_${gid}"]:checked`);
     if (!selectedRadio) { alert('⚠️ الرجاء اختيار الاسم المعتمد أولاً'); return; }
@@ -990,10 +986,9 @@ window.executeMerge = async function(gid, patientIds) {
     const masterName = selectedRadio.dataset.name;
     const dupIds     = patientIds.filter(id => id !== masterId);
 
-    if (!confirm(`✅ الاسم المعتمد: ${masterName}\n\n🗑️ سيُحذف ${dupIds.length} سجل مكرر وتُنقل جميع زياراتهم إليه.\n\nهل تريد المتابعة؟`)) return;
+    if (!confirm(`✅ السجل الرئيسي الذي تم اعتماده هو: ${masterName}\n\n🗑️ سيتم الآن تدمير وإزالة ${dupIds.length} ملف مكرر نهائياً مع ترحيل ودمج كل التقارير والزيارات والبيانات المالية التابعة لهم لهذا الملف.\n\nهل أنت متأكد من تنفيذ عملية التوحيد الهيكلي للبيانات؟`)) return;
 
     try {
-        // نقل الزيارات
         const snap = await get(ref(db, 'visits'));
         if (snap.val()) {
             for (const [vid, vdata] of Object.entries(snap.val())) {
@@ -1002,26 +997,23 @@ window.executeMerge = async function(gid, patientIds) {
                 }
             }
         }
-        // حذف السجلات المكررة
         for (const dupId of dupIds) await remove(ref(db, `patients/${dupId}`));
 
-        // استبدال البطاقة برسالة نجاح
         const card = document.getElementById(`card_${gid}`);
         if (card) card.outerHTML = `
             <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
                 <i class="fas fa-check-circle fa-lg"></i>
-                <span>تم الدمج بنجاح — الحساب المعتمد: <strong>${masterName}</strong> | تم نقل زيارات ${dupIds.length} سجل إليه وحذفها.</span>
+                <span>تم التوحيد والدمج الكلي بنجاح! السجل المعتمد الآن: <strong>${masterName}</strong></span>
             </div>`;
-        alert(`✅ تم الدمج بنجاح!\nالحساب المعتمد: ${masterName}\nتم حذف ${dupIds.length} سجل مكرر`);
-    } catch (e) {
-        alert('❌ حدث خطأ أثناء الدمج:\n' + e.message);
+        alert(`✅ عملية الدمج انتهت بنجاح لملف: ${masterName}\nتم تنظيف حقل المرضى من السجلات الزائدة وتعديل ملفات الزيارات بنجاح.`);
+    } catch (error) {
+        alert('❌ حدث خطأ تقني في البنية التحتية لقاعدة البيانات أثناء الدمج:\n' + error.message);
     }
 };
 
 window.clearAllPatientsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'patients')); };
 window.clearAllVisitsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'visits')); };
 
-// استعادة البريد الإلكتروني المحفوظ عند بدء التحميل
 window.addEventListener('DOMContentLoaded', () => {
     if (getSavedEmail()) {
         document.getElementById('loginEmail').value = getSavedEmail();

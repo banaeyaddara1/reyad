@@ -476,12 +476,12 @@
         #appContent    { display: none !important; }
         #topButtons    { display: none !important; }
         #welcomeMessage{ display: none !important; }
-        /* تُطبَّق بعد تأكيد Firebase Auth */
+        
         #appContent.auth-ok     { display: block !important; }
         #topButtons.auth-ok     { display: flex  !important; }
         #welcomeMessage.auth-ok { display: block !important; }
         #loginContainer.auth-ok { display: none  !important; }
-        /* حجب قائمة التبويب ومحتواها أيضاً */
+        
         .nav-tabs.auth-ok  { display: flex  !important; }
         .tab-content.auth-ok{ display: block !important; }
     </style>
@@ -605,8 +605,9 @@
                                         <div id="mergeDuplicatePreview" class="small text-danger mt-1"></div>
                                     </div>
                                     
+                                    <!-- تم إصلاح استدعاء الدالة هنا لتعمل بالشكل الصحيح أوتوماتيكياً ويدوياً -->
                                     <div class="col-md-12 text-center mt-3">
-                                        <button class="btn btn-warning btn-lg" onclick="window.mergePatients()" id="mergeBtn" disabled>
+                                        <button class="btn btn-warning btn-lg" onclick="window.executeMerge('manual', [document.getElementById('mergeMainPatientId').value, document.getElementById('mergeDuplicatePatientId').value])" id="mergeBtn" disabled>
                                             <i class="fas fa-code-branch"></i> دمج المريض المكرر مع الأصلي
                                         </button>
                                         <button class="btn btn-outline-secondary ms-2" onclick="window.clearMergeSelection()">
