@@ -38,35 +38,31 @@ onAuthStateChanged(auth, (user) => {
     const appContent = document.getElementById('appContent');
     const topButtons = document.getElementById('topButtons');
     const welcomeMessage = document.getElementById('welcomeMessage');
-    const tabs = document.querySelector('.nav-tabs');
-    const tabContent = document.querySelector('.tab-content');
 
     if (user) {
         currentUser = user;
-        const isAdmin = isCurrentUserAdmin();
-        
-        if (loginContainer) loginContainer.style.setProperty('display', 'none', 'important');
-        if (appContent) appContent.style.setProperty('display', 'block', 'important');
-        if (topButtons) topButtons.style.setProperty('display', 'flex', 'important');
-        if (welcomeMessage) welcomeMessage.style.setProperty('display', 'block', 'important');
-        if (tabs) tabs.style.setProperty('display', 'flex', 'important');
-        if (tabContent) tabContent.style.setProperty('display', 'block', 'important');
-        
+
+        // إظهار المحتوى بعد التحقق من Auth
+        if (loginContainer)   { loginContainer.classList.add('auth-hidden'); }
+        if (appContent)       { appContent.classList.add('auth-visible'); }
+        if (topButtons)       { topButtons.classList.add('auth-visible'); }
+        if (welcomeMessage)   { welcomeMessage.classList.add('auth-visible'); }
+
         const userNameSpan = document.getElementById('userNameDisplay');
         if (userNameSpan) {
             userNameSpan.textContent = `مرحباً ${user.email.split('@')[0]}`;
         }
-        
+
         applyPermissionsBasedOnRole();
         loadPatientsList();
     } else {
         currentUser = null;
-        if (loginContainer) loginContainer.style.setProperty('display', 'flex', 'important');
-        if (appContent) appContent.style.setProperty('display', 'none', 'important');
-        if (topButtons) topButtons.style.setProperty('display', 'none', 'important');
-        if (welcomeMessage) welcomeMessage.style.setProperty('display', 'none', 'important');
-        if (tabs) tabs.style.setProperty('display', 'none', 'important');
-        if (tabContent) tabContent.style.setProperty('display', 'none', 'important');
+
+        // إخفاء المحتوى وعرض صفحة الدخول
+        if (loginContainer)   { loginContainer.classList.remove('auth-hidden'); }
+        if (appContent)       { appContent.classList.remove('auth-visible'); }
+        if (topButtons)       { topButtons.classList.remove('auth-visible'); }
+        if (welcomeMessage)   { welcomeMessage.classList.remove('auth-visible'); }
     }
 });
 
@@ -821,47 +817,142 @@ window.clearMergeSelection = function() {
     enableMergeButtonIfReady();
 };
 
-window.findDuplicatePatients = function() {
+window.findDuplicatePatients = async function() {
+    const btn = document.querySelector('button[onclick="window.findDuplicatePatients()"]');
+    if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البحث...'; btn.disabled = true; }
+
+    // جلب عدد الزيارات لكل مريض
+    const visitsSnap = await get(ref(db, 'visits'));
+    const allVisits = visitsSnap.val() || {};
+    const visitCountMap = {}; // patientId → count
+    const visitTotalMap = {}; // patientId → totalAmount sum
+    for (const v of Object.values(allVisits)) {
+        if (!v.patientId) continue;
+        visitCountMap[v.patientId] = (visitCountMap[v.patientId] || 0) + 1;
+        visitTotalMap[v.patientId] = (visitTotalMap[v.patientId] || 0) + (parseFloat(v.totalAmount) || 0);
+    }
+
+    // إيجاد المجموعات المكررة
     const duplicates = [];
     const processed = new Set();
     for (let i = 0; i < allPatients.length; i++) {
-        const p1 = allPatients[i]; if (processed.has(p1.id)) continue;
+        const p1 = allPatients[i];
+        if (processed.has(p1.id)) continue;
         const similar = [p1];
         for (let j = i + 1; j < allPatients.length; j++) {
             const p2 = allPatients[j];
-            if ((p1.name?.trim() === p2.name?.trim()) || (p1.phone && p1.phone === p2.phone)) {
-                similar.push(p2); processed.add(p2.id);
+            if (processed.has(p2.id)) continue;
+            const nameMatch = p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase();
+            const phoneMatch = p1.phone && p2.phone && p1.phone.replace(/\s/g,'') === p2.phone.replace(/\s/g,'');
+            if (nameMatch || phoneMatch) {
+                similar.push(p2);
+                processed.add(p2.id);
             }
         }
         if (similar.length > 1) duplicates.push(similar);
         processed.add(p1.id);
     }
-    
-    let html = '<ul>';
-    duplicates.forEach((g, idx) => {
-        html += `<li>Group ${idx+1}: ${g.map(p => p.name).join(' | ')} 
-        <button class="btn btn-xs btn-warning" onclick='window.mergeSelectedFromGroup(${idx}, ${JSON.stringify(g)}, this)'>دمج الحسابات</button></li>`;
+
+    if (btn) { btn.innerHTML = '<i class="fas fa-search"></i> كشف الأسماء المتشابهة'; btn.disabled = false; }
+
+    if (duplicates.length === 0) {
+        document.getElementById('duplicateSuggestionList').innerHTML =
+            '<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> لا توجد تكرارات واضحة في قائمة المرضى</div>';
+        return;
+    }
+
+    let html = `<div class="mb-2 text-warning fw-bold"><i class="fas fa-exclamation-triangle"></i> وُجد ${duplicates.length} مجموعة مكررة محتملة</div>`;
+
+    duplicates.forEach((group, idx) => {
+        const groupId = `dupGroup_${idx}`;
+        html += `
+        <div class="card mb-3 border-warning" id="${groupId}">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-2">
+                <strong><i class="fas fa-clone"></i> مجموعة مكررة #${idx + 1} — ${group.length} سجلات</strong>
+                <button class="btn btn-sm btn-danger" onclick="window.executeDuplicateMerge('${groupId}', ${JSON.stringify(group.map(p=>p.id)).replace(/"/g,"'")})">
+                    <i class="fas fa-code-branch"></i> دمج المجموعة
+                </button>
+            </div>
+            <div class="card-body p-2">
+                <p class="small text-muted mb-2"><i class="fas fa-info-circle"></i> اختر الاسم <strong>المعتمد</strong> (ستُنقل إليه جميع الزيارات وتُحذف البقية):</p>
+                <div class="row g-2">`;
+
+        group.forEach((p, pi) => {
+            const visits = visitCountMap[p.id] || 0;
+            const total  = visitTotalMap[p.id] || 0;
+            html += `
+                <div class="col-12">
+                    <div class="form-check p-0">
+                        <label class="w-100" style="cursor:pointer;">
+                            <input type="radio" name="masterChoice_${groupId}" value="${p.id}" data-name="${p.name}"
+                                class="form-check-input me-2" ${pi === 0 ? 'checked' : ''}>
+                            <div class="d-inline-flex flex-wrap gap-2 align-items-center p-2 rounded border ${pi === 0 ? 'border-success bg-light' : 'border-secondary'}">
+                                <span class="badge bg-primary"><i class="fas fa-user"></i> ${p.name || '-'}</span>
+                                <span class="badge bg-secondary"><i class="fas fa-birthday-cake"></i> ${p.age || '-'} سنة</span>
+                                <span class="badge bg-info text-dark"><i class="fas fa-phone"></i> ${p.phone || 'بدون جوال'}</span>
+                                <span class="badge bg-light text-dark border"><i class="fas fa-map-marker-alt"></i> ${p.address || 'بدون عنوان'}</span>
+                                <span class="badge bg-success"><i class="fas fa-stethoscope"></i> ${visits} زيارة</span>
+                                <span class="badge bg-warning text-dark"><i class="fas fa-coins"></i> ${total.toFixed(2)} د.أ</span>
+                                <span class="badge bg-dark"><i class="fas fa-calendar"></i> ${p.createdAt || '-'}</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>`;
+        });
+
+        html += `</div></div></div>`;
     });
-    html += '</ul>';
-    document.getElementById('duplicateSuggestionList').innerHTML = duplicates.length ? html : 'لا توجد تكرارات واضحة';
+
+    document.getElementById('duplicateSuggestionList').innerHTML = html;
+
+    // تأثير بصري: تبديل لون الـ radio المختار
+    document.querySelectorAll('[name^="masterChoice_"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const groupName = this.name;
+            document.querySelectorAll(`[name="${groupName}"]`).forEach(r => {
+                const box = r.closest('label').querySelector('div');
+                box.classList.remove('border-success', 'bg-light', 'border-secondary');
+                box.classList.add(r.checked ? 'border-success' : 'border-secondary');
+                if (r.checked) box.classList.add('bg-light');
+            });
+        });
+    });
 };
 
-window.mergeSelectedFromGroup = async function(idx, group, btn) {
-    const main = group[0];
-    const dups = group.slice(1);
+window.executeDuplicateMerge = async function(groupId, patientIds) {
+    // تحديد المريض المعتمد من الـ radio المختار
+    const selectedRadio = document.querySelector(`[name="masterChoice_${groupId}"]:checked`);
+    if (!selectedRadio) { alert('⚠️ الرجاء اختيار الاسم المعتمد أولاً'); return; }
+
+    const masterId   = selectedRadio.value;
+    const masterName = selectedRadio.dataset.name;
+    const dupIds     = patientIds.filter(id => id !== masterId);
+
+    const confirmMsg = `✅ الاسم المعتمد: ${masterName}\n\n🗑️ سيُحذف ${dupIds.length} سجل مكرر وتُنقل جميع زياراتهم إلى الحساب المعتمد.\n\nهل تريد المتابعة؟`;
+    if (!confirm(confirmMsg)) return;
+
     try {
-        const snap = await get(ref(db, 'visits'));
-        if (snap.val()) {
-            for (const [vid, vdata] of Object.entries(snap.val())) {
-                if (dups.some(d => d.id === vdata.patientId)) {
-                    await update(ref(db, `visits/${vid}`), { patientId: main.id, patientName: main.name });
+        // نقل جميع زيارات المكررين إلى المعتمد
+        const visitsSnap = await get(ref(db, 'visits'));
+        if (visitsSnap.val()) {
+            for (const [vid, vdata] of Object.entries(visitsSnap.val())) {
+                if (dupIds.includes(vdata.patientId)) {
+                    await update(ref(db, `visits/${vid}`), { patientId: masterId, patientName: masterName });
                 }
             }
         }
-        for (const d of dups) { await remove(ref(db, `patients/${d.id}`)); }
-        alert('✅ تم الدمج بنجاح');
-        window.findDuplicatePatients();
-    } catch (e) { alert('خطأ في الدمج'); }
+        // حذف السجلات المكررة
+        for (const dupId of dupIds) {
+            await remove(ref(db, `patients/${dupId}`));
+        }
+        // إخفاء البطاقة المدمجة
+        const card = document.getElementById(groupId);
+        if (card) card.innerHTML = `<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> تم الدمج بنجاح — الحساب المعتمد: <strong>${masterName}</strong></div>`;
+
+        alert(`✅ تم دمج ${dupIds.length} سجل مكرر بنجاح تحت اسم:\n${masterName}`);
+    } catch (e) {
+        alert('❌ حدث خطأ أثناء الدمج: ' + e.message);
+    }
 };
 
 window.clearAllPatientsData = async () => { if(confirm('⚠️ حذف الكل؟')) await remove(ref(db, 'patients')); };

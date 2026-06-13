@@ -471,6 +471,18 @@
         .patient-info-card i { margin-left: 10px; }
         .modal-content { background: var(--card-bg); color: var(--text-color); }
         .btn-xs { padding: 2px 8px; font-size: 11px; border-radius: 10px; }
+
+        /* ===================== إخفاء المحتوى قبل التحقق من Auth ===================== */
+        #appContent { display: none !important; }
+        #topButtons { display: none !important; }
+        #welcomeMessage { display: none !important; }
+        #loginContainer { display: flex; }
+
+        /* تطبق هذه عبر JS بعد تحقق Firebase */
+        #appContent.auth-visible { display: block !important; }
+        #topButtons.auth-visible { display: flex !important; }
+        #welcomeMessage.auth-visible { display: block !important; }
+        #loginContainer.auth-hidden { display: none !important; }
     </style>
 </head>
 <body class="dark-mode">
@@ -606,7 +618,7 @@
                                 <div class="mt-3">
                                     <label class="form-label fw-bold"><i class="fas fa-list"></i> عرض جميع المرضى المكررين المحتملين</label>
                                     <button class="btn btn-sm btn-info mb-2" onclick="window.findDuplicatePatients()"><i class="fas fa-search"></i> كشف الأسماء المتشابهة</button>
-                                    <div id="duplicateSuggestionList" class="small border rounded p-2" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="duplicateSuggestionList" class="small border rounded p-2" style="max-height: 500px; overflow-y: auto;"></div>
                                 </div>
                             </div>
                         </div>
