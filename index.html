@@ -532,7 +532,7 @@
                     <li class="nav-item"><button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history"><i class="fas fa-history"></i> التاريخ الطبي</button></li>
                     <li class="nav-item"><button class="nav-link" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance"><i class="fas fa-chart-line"></i> التقارير المالية</button></li>
                     <li class="nav-item admin-only" id="importTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelImportTab"><i class="fas fa-file-upload"></i> استيراد البيانات (Excel)</button></li>
-                    <li class="nav-item admin-only" id="exportTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-file-download"></i> تصدير البيانات</button></li>
+                    <li class="nav-item admin-only" id="exportTab"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#excelExportTab"><i class="fas fa-database"></i> نسخة احتياطية (Excel)</button></li>
                 </ul>
 
                 <div class="tab-content">
@@ -675,6 +675,10 @@
                                             <label>&nbsp;</label>
                                             <button class="btn btn-primary w-100" onclick="getFinancialReportAutocomplete()"><i class="fas fa-calculator"></i> عرض</button>
                                         </div>
+                                        <div class="col-md-2">
+                                            <label>&nbsp;</label>
+                                            <button class="btn btn-success w-100" onclick="exportFinancialReportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div id="financeResult"></div>
@@ -709,11 +713,34 @@
 
                     <div class="tab-pane fade" id="excelExportTab">
                         <div class="dashboard-card">
-                            <div class="card-header"><i class="fas fa-file-download"></i> تحميل وتنزيل بيانات النظام الحالية لـ Excel</div>
-                            <div class="card-body text-center py-4">
+                            <div class="card-header"><i class="fas fa-database"></i> تصدير نسخة احتياطية شاملة (باك أب)</div>
+                            <div class="card-body">
+                                <div class="filter-card mb-4">
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-md-4">
+                                            <label><i class="fas fa-calendar-alt"></i> من تاريخ (اختياري)</label>
+                                            <input type="date" id="exportStartDate" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label><i class="fas fa-calendar-alt"></i> إلى تاريخ (اختياري)</label>
+                                            <input type="date" id="exportEndDate" class="form-control">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted d-block mb-2"><i class="fas fa-info-circle"></i> اتركهما فارغَين لتصدير كافة البيانات</small>
+                                            <button class="btn btn-success btn-lg w-100" onclick="window.exportFullBackup()">
+                                                <i class="fas fa-download"></i> تصدير النسخة الاحتياطية الكاملة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> <strong>ملاحظة:</strong> النسخة الاحتياطية تحتوي على 3 شيتات: <strong>المرضى</strong> + <strong>الزيارات</strong> + <strong>الملخص المالي</strong>
+                                </div>
+                                <hr>
+                                <h6 class="mb-3"><i class="fas fa-file-download"></i> أو قم بتنزيل كل قسم بشكل منفصل:</h6>
                                 <div class="d-flex justify-content-center gap-3 flex-wrap">
                                     <button class="btn btn-primary btn-lg" onclick="window.exportPatientsToExcel()"><i class="fas fa-file-excel"></i> تنزيل صفحة المرضى كاملة</button>
-                                    <button class="btn btn-success btn-lg" onclick="window.exportVisitsToExcel()"><i class="fas fa-file-prescription"></i> تنزيل التاريخ الطبي كامل</button>
+                                    <button class="btn btn-secondary btn-lg" onclick="window.exportVisitsToExcel()"><i class="fas fa-file-prescription"></i> تنزيل التاريخ الطبي كامل</button>
                                 </div>
                             </div>
                         </div>

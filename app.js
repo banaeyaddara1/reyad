@@ -255,11 +255,16 @@ window.getFinancialReportAutocomplete = async () => {
             if(start) start.setHours(0,0,0,0);
             if(end) end.setHours(23,59,59,999);
             
+            // إذا لم يتم تحديد أي تواريخ نعرض كافة الحركات
             let inRange = true;
-            if (visitDate) {
+            if (!start && !end) {
+                inRange = true; // لا يوجد فلتر تاريخ - عرض الكل
+            } else if (visitDate) {
                 if (start && visitDate < start) inRange = false;
                 if (end && visitDate > end) inRange = false;
-            } else { inRange = false; }
+            } else {
+                inRange = false; // لا يوجد تاريخ للزيارة
+            }
             
             let patientMatch = true;
             if (patientId) { patientMatch = (patientId === v.patientId); }
@@ -387,6 +392,203 @@ window.getFinancialReportAutocomplete = async () => {
         }
     }
     document.getElementById('financeResult').innerHTML = html;
+};
+
+// ===================== تصدير التقرير المالي إلى Excel =====================
+window.exportFinancialReportToExcel = async function() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const patientId = document.getElementById('financeSelectedPatientId').value;
+    const patientName = document.getElementById('financePatientSearch').value.trim();
+
+    const snapshot = await get(ref(db, 'visits'));
+    const visits = snapshot.val();
+    let filteredVisits = [];
+    let totalAmountSum = 0, paidAmountSum = 0;
+
+    if (visits) {
+        for (const key of Object.keys(visits)) {
+            const v = visits[key];
+            let visitDate = null;
+            if (v.date) {
+                const parts = v.date.split('/');
+                if (parts.length === 3) visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            let start = startDate ? new Date(startDate) : null;
+            let end = endDate ? new Date(endDate) : null;
+            if(start) start.setHours(0,0,0,0);
+            if(end) end.setHours(23,59,59,999);
+
+            let inRange = true;
+            if (!start && !end) {
+                inRange = true;
+            } else if (visitDate) {
+                if (start && visitDate < start) inRange = false;
+                if (end && visitDate > end) inRange = false;
+            } else {
+                inRange = false;
+            }
+
+            let patientMatch = true;
+            if (patientId) patientMatch = (patientId === v.patientId);
+            else if (patientName) patientMatch = v.patientName?.toLowerCase().includes(patientName.toLowerCase());
+
+            if (inRange && patientMatch) {
+                filteredVisits.push({ id: key, ...v });
+                totalAmountSum += parseFloat(v.totalAmount) || 0;
+                paidAmountSum += parseFloat(v.paidAmount) || 0;
+            }
+        }
+    }
+
+    filteredVisits.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    if (filteredVisits.length === 0) {
+        alert('⚠️ لا توجد بيانات للتصدير في الفترة المحددة');
+        return;
+    }
+
+    const remainingSum = totalAmountSum - paidAmountSum;
+    const periodLabel = startDate && endDate ? `من ${startDate} إلى ${endDate}` : (startDate ? `من ${startDate}` : (endDate ? `إلى ${endDate}` : 'كافة الفترات'));
+    const patientLabel = patientName || 'جميع المرضى';
+
+    // بيانات الشيت
+    const wsData = [
+        ['التقرير المالي - صيدلية فراس'],
+        [`الفترة: ${periodLabel}`],
+        [`المريض: ${patientLabel}`],
+        [`تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')}`],
+        [],
+        ['#', 'التاريخ', 'الوقت', 'المريض', 'التشخيص', 'العلاج', 'عدد العلب', 'المبلغ الكامل (د.أ)', 'المدفوع (د.أ)', 'المتبقي (د.أ)']
+    ];
+
+    filteredVisits.forEach((v, i) => {
+        const rem = (parseFloat(v.totalAmount) || 0) - (parseFloat(v.paidAmount) || 0);
+        wsData.push([
+            i + 1,
+            v.date || '-',
+            v.time || '-',
+            v.patientName || '-',
+            v.diagnosis || '-',
+            v.treatment || '-',
+            v.boxesCount || 0,
+            parseFloat(v.totalAmount) || 0,
+            parseFloat(v.paidAmount) || 0,
+            rem
+        ]);
+    });
+
+    wsData.push([]);
+    wsData.push(['', '', '', '', '', '', 'الإجمالي', totalAmountSum.toFixed(2), paidAmountSum.toFixed(2), remainingSum.toFixed(2)]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // تنسيق عرض الأعمدة
+    ws['!cols'] = [
+        {wch:5},{wch:14},{wch:12},{wch:22},{wch:28},{wch:28},{wch:10},{wch:16},{wch:14},{wch:14}
+    ];
+    // دمج خلايا العنوان
+    ws['!merges'] = [
+        {s:{r:0,c:0}, e:{r:0,c:9}},
+        {s:{r:1,c:0}, e:{r:1,c:9}},
+        {s:{r:2,c:0}, e:{r:2,c:9}},
+        {s:{r:3,c:0}, e:{r:3,c:9}}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'التقرير المالي');
+    const fileName = `تقرير_مالي_${patientLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    alert(`✅ تم تصدير التقرير المالي بنجاح!\n📄 ${filteredVisits.length} حركة مالية`);
+};
+
+// ===================== تصدير نسخة احتياطية شاملة (باك أب كامل) =====================
+window.exportFullBackup = async function() {
+    const startDate = document.getElementById('exportStartDate').value;
+    const endDate = document.getElementById('exportEndDate').value;
+
+    const [patientsSnap, visitsSnap] = await Promise.all([
+        get(ref(db, 'patients')),
+        get(ref(db, 'visits'))
+    ]);
+
+    const patients = patientsSnap.val() || {};
+    const allVisits = visitsSnap.val() || {};
+
+    // فلترة الزيارات حسب التاريخ إن وجد
+    let filteredVisits = {};
+    for (const [key, v] of Object.entries(allVisits)) {
+        let visitDate = null;
+        if (v.date) {
+            const parts = v.date.split('/');
+            if (parts.length === 3) visitDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+        let start = startDate ? new Date(startDate) : null;
+        let end = endDate ? new Date(endDate) : null;
+        if(start) start.setHours(0,0,0,0);
+        if(end) end.setHours(23,59,59,999);
+
+        let inRange = true;
+        if (start || end) {
+            if (!visitDate) { inRange = false; }
+            else {
+                if (start && visitDate < start) inRange = false;
+                if (end && visitDate > end) inRange = false;
+            }
+        }
+        if (inRange) filteredVisits[key] = v;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // شيت 1: المرضى
+    const patientsData = [['#', 'الاسم', 'العمر', 'رقم الجوال', 'العنوان', 'تاريخ التسجيل', 'Firebase ID']];
+    let idx = 1;
+    for (const [id, p] of Object.entries(patients)) {
+        patientsData.push([idx++, p.name || '', p.age || '', p.phone || '', p.address || '', p.createdAt || '', id]);
+    }
+    const wsPatients = XLSX.utils.aoa_to_sheet(patientsData);
+    wsPatients['!cols'] = [{wch:5},{wch:25},{wch:8},{wch:16},{wch:22},{wch:16},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsPatients, 'المرضى');
+
+    // شيت 2: الزيارات
+    const visitsData = [['#', 'التاريخ', 'الوقت', 'المريض', 'التشخيص', 'العلاج', 'عدد العلب', 'المبلغ الكامل', 'المدفوع', 'المتبقي', 'Firebase ID']];
+    const sortedVisits = Object.entries(filteredVisits).sort((a,b) => (b[1].timestamp||0)-(a[1].timestamp||0));
+    let vi = 1;
+    for (const [id, v] of sortedVisits) {
+        const rem = (parseFloat(v.totalAmount)||0)-(parseFloat(v.paidAmount)||0);
+        visitsData.push([vi++, v.date||'', v.time||'', v.patientName||'', v.diagnosis||'', v.treatment||'', v.boxesCount||0, parseFloat(v.totalAmount)||0, parseFloat(v.paidAmount)||0, rem, id]);
+    }
+    const wsVisits = XLSX.utils.aoa_to_sheet(visitsData);
+    wsVisits['!cols'] = [{wch:5},{wch:14},{wch:12},{wch:22},{wch:30},{wch:30},{wch:10},{wch:14},{wch:12},{wch:12},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsVisits, 'الزيارات');
+
+    // شيت 3: ملخص مالي
+    let totalAmt = 0, totalPaid = 0;
+    for (const v of Object.values(filteredVisits)) {
+        totalAmt += parseFloat(v.totalAmount)||0;
+        totalPaid += parseFloat(v.paidAmount)||0;
+    }
+    const summaryData = [
+        ['ملخص النسخة الاحتياطية'],
+        [],
+        ['إجمالي عدد المرضى', Object.keys(patients).length],
+        ['إجمالي عدد الزيارات (المصدَّرة)', sortedVisits.length],
+        ['إجمالي المبالغ الكلية (د.أ)', totalAmt.toFixed(2)],
+        ['إجمالي المدفوع (د.أ)', totalPaid.toFixed(2)],
+        ['إجمالي المتبقي (د.أ)', (totalAmt - totalPaid).toFixed(2)],
+        [],
+        ['الفترة المصدَّرة', startDate && endDate ? `${startDate} → ${endDate}` : (startDate ? `من ${startDate}` : (endDate ? `حتى ${endDate}` : 'كافة البيانات'))],
+        ['تاريخ التصدير', new Date().toLocaleDateString('ar-EG')],
+        ['وقت التصدير', new Date().toLocaleTimeString('ar-EG')],
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    wsSummary['!cols'] = [{wch:30},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'الملخص');
+
+    const periodStr = startDate || endDate ? `_${(startDate||'').replace(/-/g,'')}_${(endDate||'').replace(/-/g,'')}` : '_كامل';
+    XLSX.writeFile(wb, `نسخة_احتياطية_صيدلية_فراس${periodStr}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    alert(`✅ تم تصدير النسخة الاحتياطية بنجاح!\n👥 ${Object.keys(patients).length} مريض\n🏥 ${sortedVisits.length} زيارة`);
 };
 
 // ===================== بقية وظائف النظام المساعدة =====================
